@@ -13,6 +13,8 @@ namespace Poker
         private static int wins = 0;
         private static int tournaments = 0;
 
+        private static bool interactive = false;
+
         private static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.Unicode;
@@ -22,19 +24,27 @@ namespace Poker
 
             string dataPath = "../datafiles";
             IHandEvaluator evaluator = new HandEvaluator();
-            evaluator = new LutEvaluator(evaluator, dataPath);
-            ISimulator simulator = new Simulator(evaluator);
+            //evaluator = new LutEvaluator(evaluator, dataPath);
+            evaluator = new MockEvaluator();
             IStaticData staticData = new StaticData(dataPath);
+            ISimulator simulator = new Simulator(evaluator, staticData);
             IHandPredictor predictor = new NeuralNetHandPredictor(staticData);
+
+            if (!interactive)
+            {
+                LogManager.Configuration.LoggingRules.Clear();
+                LogManager.Configuration.Reload();
+            }
 
             while (true)
             {
                 int amount = 200;
+                var alice = new AiPlayer(simulator, predictor, staticData) { Name = "Alice" };
                 List<IPlayer> players = new List<IPlayer>()
                 {
                     //new ConsoleInteractivePlayer(amount) { Name = "Lewis" },
 
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Alice" },
+                    alice,
                     new AiPlayer(simulator,predictor, staticData) { Name = "Bob" },
                     new AiPlayer(simulator,predictor, staticData) { Name = "Charlie" },
                     new AiPlayer(simulator,predictor, staticData) { Name = "Dave" },
@@ -52,7 +62,8 @@ namespace Poker
                 {
                     player.Balance = amount;
                 }
-                ((AiPlayer)players.First(p => p is AiPlayer)).ShowPredictions = true;
+                alice.ShowPredictions = false;
+                alice.RaiseThreshold = 0.4;
 
                 PrintStatus(players);
 
@@ -106,7 +117,11 @@ namespace Poker
                         break;
                     }
 
-                    Console.ReadKey();
+                    if (interactive)
+                    {
+                        Console.WriteLine("Press any key for next hand...");
+                        Console.ReadKey();
+                    }
                     //Console.Clear();
                 }
             }
@@ -114,12 +129,15 @@ namespace Poker
 
         private static void PrintStatus(IEnumerable<IPlayer> players)
         {
-            //Console.Clear();
-            //Console.WriteLine("Wins: {0}  Games: {1}  Win rate: {2}", wins, tournaments, (double)wins / tournaments);
-            //foreach (var p in players.OrderByDescending(p => p.Balance))
-            //{
-            //    Console.WriteLine("{0}: {1}", p, p.Balance);
-            //}
+            if (!interactive)
+            {
+                Console.Clear();
+                Console.WriteLine("Wins: {0}  Games: {1}  Win rate: {2}", wins, tournaments, (double)wins / tournaments);
+                foreach (var p in players.OrderByDescending(p => p.Balance))
+                {
+                    Console.WriteLine("{0}: {1}", p, p.Balance);
+                }
+            }
         }
     }
 }

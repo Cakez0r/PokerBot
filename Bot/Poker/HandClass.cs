@@ -5,7 +5,7 @@ using System.Text;
 namespace Poker
 {
     [Serializable]
-    public struct HandClass
+    public class HandClass : IEquatable<HandClass>, IEqualityComparer<HandClass>
     {
         public Face A { get; set; }
 
@@ -37,7 +37,17 @@ namespace Poker
             };
         }
 
-        public IList<Card[]> Expand()
+        public bool Equals(HandClass x, HandClass y)
+        {
+            return x.GetHashCode() == y.GetHashCode();
+        }
+
+        public bool Equals(HandClass other)
+        {
+            return Equals(this, other);
+        }
+
+        public IReadOnlyList<Card[]> Expand()
         {
             List<Card[]> hands = new List<Card[]>(4);
             if (A == B)
@@ -113,6 +123,28 @@ namespace Poker
             }
 
             return hands;
+        }
+
+        public int GetHashCode(HandClass obj)
+        {
+            return (1 << ((int)obj.A - 1)) | (1 << ((int)obj.B + 12)) | (Suited ? 1 : 0);
+        }
+
+        public override bool Equals(object obj)
+        {
+            var item = obj as HandClass;
+
+            if (item == null)
+            {
+                return false;
+            }
+
+            return Equals(item);
+        }
+
+        public override int GetHashCode()
+        {
+            return GetHashCode(this);
         }
 
         public override string ToString()

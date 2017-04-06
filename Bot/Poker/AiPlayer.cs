@@ -26,6 +26,10 @@ namespace Poker
 
         public bool ShowPredictions { get; set; }
 
+        public double RaiseThreshold { get; set; } = 0.5;
+
+        public int SimulationCount { get; set; } = 100_000;
+
         private IHandPredictor m_predictor;
 
         private IStaticData m_staticData;
@@ -60,7 +64,7 @@ namespace Poker
 
             double potOdds = amountToCall / ((double)game.PotSize + amountToCall);
 
-            double winRate = m_simulator.Simulate(Hole[0], Hole[1], game.Board, opponentHandWeightings, 100000);
+            double winRate = m_simulator.Simulate(Hole[0], Hole[1], game.Board, opponentHandWeightings, SimulationCount);
             s_log.Info("{0} has {1} {2} (Win rate: {3})", Name, Hole[0], Hole[1], winRate);
 
             if (winRate < potOdds)
@@ -75,7 +79,7 @@ namespace Poker
             }
 
             int handWorth = 0;
-            if (winRate > 0.5 && game.PotSize < maxValue)
+            if (winRate > RaiseThreshold && game.PotSize < maxValue)
             {
                 if (game.State == HandState.Preflop)
                 {
@@ -84,6 +88,10 @@ namespace Poker
                 else
                 {
                     handWorth = game.PotSize + (int)(game.PotSize * 0.75);
+                    if (handWorth - contribution < minRaise)
+                    {
+                        handWorth = minRaise;
+                    }
                 }
             }
 

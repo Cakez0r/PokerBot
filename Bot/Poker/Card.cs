@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Poker
@@ -78,6 +79,7 @@ namespace Poker
             return sb.ToString();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong MakeHandBitmap(IEnumerable<Card> cards)
         {
             ulong bm = 0;
@@ -92,12 +94,12 @@ namespace Poker
 
         public bool Equals(Card other)
         {
-            return other.Face == Face && other.Suit == Suit;
+            return Equals(this, other);
         }
 
         public bool Equals(Card x, Card y)
         {
-            return GetHashCode(x) == GetHashCode(y);
+            return ToIndex(x) == ToIndex(y);
         }
 
         public override bool Equals(object obj)
@@ -122,11 +124,13 @@ namespace Poker
             return s_cardBitmaps[bm];
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong ToBitmap(Card c)
         {
             return 1ul << ToIndex(c);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ToIndex(Card c)
         {
             return (int)c.Suit + (((int)c.Face - 2) * 4);

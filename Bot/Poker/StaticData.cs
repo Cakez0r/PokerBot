@@ -13,6 +13,8 @@ namespace Poker
 
         public IReadOnlyList<HandClass> AllPossibleHands { get; private set; }
 
+        public IReadOnlyDictionary<HandClass, IReadOnlyList<Card[]>> HandClassExpansions { get; private set; }
+
         public StaticData(string dataPath)
         {
             var possibleHands = JsonConvert.DeserializeObject<List<HandClass>>(File.ReadAllText(dataPath + "/ordering.json"));
@@ -28,6 +30,13 @@ namespace Poker
 
             var averagePredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/average.json"));
             AveragePredictionVector = averagePredictionVector;
+
+            Dictionary<HandClass, IReadOnlyList<Card[]>> expansions = new Dictionary<HandClass, IReadOnlyList<Card[]>>();
+            foreach (var cls in AllPossibleHands)
+            {
+                expansions.Add(cls, cls.Expand());
+            }
+            HandClassExpansions = expansions;
         }
     }
 }

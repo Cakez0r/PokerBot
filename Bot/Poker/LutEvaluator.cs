@@ -30,7 +30,7 @@ namespace Poker
             LoadLookupTable(m_lookup5, dataPath + "/5.lut");
 
             s_log.Debug("Loading 6.lut...");
-            LoadLookupTable(m_lookup6, dataPath + "/5.lut");
+            LoadLookupTable(m_lookup6, dataPath + "/6.lut");
 
             s_log.Debug("Loading 7.lut...");
             LoadLookupTable(m_lookup7, dataPath + "/7.lut");

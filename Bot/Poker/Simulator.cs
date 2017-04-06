@@ -9,13 +9,15 @@ namespace Poker
     public class Simulator : ISimulator
     {
         private IHandEvaluator m_evaluator;
+        private IStaticData m_staticData;
 
-        public Simulator(IHandEvaluator evaluator)
+        public Simulator(IHandEvaluator evaluator, IStaticData staticData)
         {
             m_evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
+            m_staticData = staticData ?? throw new ArgumentNullException(nameof(staticData));
         }
 
-        private Card[] SelectRandomHand(IReadOnlyList<Tuple<HandClass, double>> weights, ISet<Card> usedCards)
+        private Card[] SelectRandomHand(IReadOnlyList<Tuple<HandClass, double>> weights, ulong usedCards)
         {
             Card[] result = null;
             while (result == null)
@@ -27,24 +29,22 @@ namespace Poker
             return result;
         }
 
-        private Card[] ExpandRandom(HandClass c, ISet<Card> usedCards)
+        private Card[] ExpandRandom(HandClass c, ulong usedCards)
         {
-            IList<Card[]> possibilities = c.Expand();
-
-            for (int i = possibilities.Count - 1; i >= 0; i--)
+            IReadOnlyList<Card[]> expansions = m_staticData.HandClassExpansions[c];
+            int ofs = GlobalRandom.Next(expansions.Count);
+            for (int i = 0; i < expansions.Count; i++)
             {
-                if (usedCards.Contains(possibilities[i][0]) || usedCards.Contains(possibilities[i][1]))
+                var idx = i % expansions.Count;
+                var hand = expansions[idx];
+                var bm = Card.MakeHandBitmap(hand);
+                if ((bm & usedCards) == 0)
                 {
-                    possibilities.RemoveAt(i);
+                    return hand;
                 }
             }
 
-            if (possibilities.Count == 0)
-            {
-                return null;
-            }
-
-            return possibilities[GlobalRandom.Next(possibilities.Count)];
+            return null;
         }
 
         public double Simulate(Card a, Card b, IEnumerable<Card> boardCards, IReadOnlyList<IReadOnlyList<Tuple<HandClass, double>>> opponentWeights, int sampleCount)
@@ -63,14 +63,14 @@ namespace Poker
                     dealsNeeded--;
                 }
 
-                HashSet<Card> usedCards = new HashSet<Card>();
+                ulong usedCards = 0;
                 Card[] hand = new Card[] { a, b };
-                usedCards.Add(a);
-                usedCards.Add(b);
+                usedCards |= Card.ToBitmap(a);
+                usedCards |= Card.ToBitmap(b);
 
                 foreach (var c in boardCards)
                 {
-                    usedCards.Add(c);
+                    usedCards |= Card.ToBitmap(c);
                 }
 
                 List<Card[]> oppponents = new List<Card[]>(opponentWeights.Count);
@@ -78,13 +78,13 @@ namespace Poker
                 for (int i = 0; i < opponentWeights.Count; i++)
                 {
                     var oh = SelectRandomHand(opponentWeights[(i + randomOffset) % opponentWeights.Count], usedCards);
-                    usedCards.Add(oh[0]);
-                    usedCards.Add(oh[1]);
+                    usedCards |= Card.ToBitmap(oh[0]);
+                    usedCards |= Card.ToBitmap(oh[1]);
                     oppponents.Add(oh);
                 }
 
-                Deck deck = new Deck();
-                deck.Rig(hand.Concat(boardCards).Concat(oppponents.SelectMany(c => c)));
+                List<Card> riggedCards = hand.Concat(boardCards).Concat(oppponents.SelectMany(c => c)).ToList();
+                IDeck deck = new RiggedDeck(riggedCards);
                 for (int i = 0; i < boardCards.Count() + 2 + (opponentWeights.Count * 2); i++)
                 {
                     deck.Deal();

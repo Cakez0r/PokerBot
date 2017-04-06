@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace Poker
 {
-    public class Deck
+    public class Deck : IDeck
     {
         private static Logger s_log = LogManager.GetCurrentClassLogger();
 
@@ -33,28 +33,19 @@ namespace Poker
         {
             for (int i = 0; i < 52; i++)
             {
-                m_cards[i] = s_allCards[i];
+                int rand = GlobalRandom.Next(i + 1);
+                if (rand != i)
+                {
+                    m_cards[i] = m_cards[rand];
+                }
+                m_cards[rand] = s_allCards[i];
             }
-
-            Shuffle();
         }
 
         public Card Deal()
         {
             int idx = Interlocked.Increment(ref m_ptr);
             return m_cards[idx - 1];
-        }
-
-        private void Shuffle()
-        {
-            for (int i = 0; i < 51; i++)
-            {
-                int j = 0;
-                j = GlobalRandom.Next(i, 52);
-                Card t = m_cards[i];
-                m_cards[i] = m_cards[j];
-                m_cards[j] = t;
-            }
         }
 
         public void Rig(IEnumerable<Card> dealNext)
