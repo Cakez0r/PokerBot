@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Poker
 {
@@ -415,7 +413,7 @@ namespace Poker
 
         private bool IsNoMoreAction()
         {
-            return Players.Count - Players.Count(p => m_folded.Contains(p) || m_allIn.Contains(p))  <= 1;
+            return Players.Count - Players.Count(p => m_folded.Contains(p) || m_allIn.Contains(p)) <= 1;
         }
 
         public void Step()

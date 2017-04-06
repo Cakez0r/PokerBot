@@ -7,7 +7,7 @@ namespace Poker
     public class Card : IEquatable<Card>, IEqualityComparer<Card>
     {
         private static readonly IReadOnlyList<Card> s_cards = null;
-        private static readonly IReadOnlyDictionary<ulong, Card> s_cardBitmaps;
+        private static readonly IReadOnlyDictionary<ulong, Card> s_cardBitmaps = null;
 
         public Suit Suit { get; private set; }
         public Face Face { get; private set; }

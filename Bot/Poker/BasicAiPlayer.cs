@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Poker
 {
@@ -40,7 +38,7 @@ namespace Poker
                 }
                 else
                 {
-                    handWorth = (int)((eval.Score / 9) * Balance * (double)0.5);
+                    handWorth = (int)((eval.Score / 9) * Balance * 0.5);
                 }
 
                 int amt = handWorth - contribution;

@@ -2,9 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Poker
 {
@@ -20,7 +17,7 @@ namespace Poker
         {
             var possibleHands = JsonConvert.DeserializeObject<List<HandClass>>(File.ReadAllText(dataPath + "/ordering.json"));
             AllPossibleHands = possibleHands.AsReadOnly();
-            
+
             var evenWeights = new List<Tuple<HandClass, double>>();
             foreach (var poss in AllPossibleHands)
             {

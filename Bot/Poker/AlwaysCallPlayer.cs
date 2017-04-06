@@ -1,9 +1,6 @@
 ﻿using NLog;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Poker
 {
@@ -17,9 +14,8 @@ namespace Poker
 
         public string Name { get; set; }
 
-        public AlwaysCallPlayer(int balance)
+        public AlwaysCallPlayer()
         {
-            Balance = balance;
         }
 
         public GameAction Act(Game game, int contribution, int amountToCall, int minRaise)

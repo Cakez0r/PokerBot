@@ -1,12 +1,6 @@
-﻿using Newtonsoft.Json;
-using NLog;
-using System;
+﻿using NLog;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Poker
 {
@@ -41,7 +35,7 @@ namespace Poker
                 for (int j = 0; j < 5; j++)
                 {
                     bool found = cards.Any(c => (int)c.Face == i - j);
-                    
+
                     if (i == 5 && j == 4)
                     {
                         found = cards.Any(c => c.Face == Face.Ace);
@@ -69,18 +63,18 @@ namespace Poker
             //straight flush
             if (isStraight && straightActives.All(c => c.Suit == straightActives.First().Suit))
             {
-                return new HandEvaluation(actives, kickers, (double)8 + MakeDouble(actives.OrderByDescending(c => c.Face).Take(1)), HandType.StraightFlush);
+                return new HandEvaluation(actives, kickers, 8 + MakeDouble(actives.OrderByDescending(c => c.Face).Take(1)), HandType.StraightFlush);
             }
 
             actives.Clear();
-            
+
             //Quads
             var groupedByFace = cards.GroupBy(c => c.Face).OrderByDescending(f => (int)f.Key).ToList();
             if (groupedByFace.Any(g => g.Count() == 4))
             {
                 actives.AddRange(groupedByFace.First(g => g.Count() == 4));
                 kickers.AddRange(cards.Where(c => !actives.Contains(c)).OrderByDescending(c => c.Face).Take(1));
-                return new HandEvaluation(actives, kickers, (double)7 + MakeDouble(actives.Take(1)) + (MakeDouble(kickers) / 100), HandType.FourOfAKind);
+                return new HandEvaluation(actives, kickers, 7 + MakeDouble(actives.Take(1)) + (MakeDouble(kickers) / 100), HandType.FourOfAKind);
             }
 
             //Full House
@@ -93,7 +87,7 @@ namespace Poker
                     actives.AddRange(trips);
                     actives.AddRange(dubs);
 
-                    return new HandEvaluation(actives, kickers, (double)6 + MakeDouble(trips.Take(1)) + (MakeDouble(dubs.Take(1)) / 100), HandType.FullHouse);
+                    return new HandEvaluation(actives, kickers, 6 + MakeDouble(trips.Take(1)) + (MakeDouble(dubs.Take(1)) / 100), HandType.FullHouse);
                 }
             }
 
@@ -102,13 +96,13 @@ namespace Poker
             {
                 actives.AddRange(groupedBySuit.First(g => g.Count() == 5));
 
-                return new HandEvaluation(actives, kickers, (double)5 + MakeDouble(actives.OrderByDescending(c => c.Face).Take(1)), HandType.Flush);
+                return new HandEvaluation(actives, kickers, 5 + MakeDouble(actives.OrderByDescending(c => c.Face).Take(1)), HandType.Flush);
             }
 
             //Straight
             if (isStraight)
             {
-                return new HandEvaluation(straightActives, kickers, (double)4 + MakeDouble(straightActives.OrderByDescending(c => c.Face).Take(1)), HandType.Straight);
+                return new HandEvaluation(straightActives, kickers, 4 + MakeDouble(straightActives.OrderByDescending(c => c.Face).Take(1)), HandType.Straight);
             }
 
             //Trips
@@ -117,7 +111,7 @@ namespace Poker
                 actives.AddRange(trips);
                 kickers.AddRange(cards.Where(c => !actives.Contains(c)).OrderByDescending(c => c.Face).Take(2));
 
-                return new HandEvaluation(actives, kickers, (double)3 + MakeDouble(kickers), HandType.ThreeOfAKind);
+                return new HandEvaluation(actives, kickers, 3 + MakeDouble(kickers), HandType.ThreeOfAKind);
             }
 
             //Two pair
@@ -126,7 +120,7 @@ namespace Poker
                 actives.AddRange(groupedByFace.Where(g => g.Count() == 2).OrderByDescending(g => (int)g.Key).Take(2).SelectMany(g => g));
                 kickers.AddRange(cards.Where(c => !actives.Contains(c)).OrderByDescending(c => c.Face).Take(1));
 
-                return new HandEvaluation(actives, kickers, (double)2 + MakeDouble(actives.Take(1)) + (MakeDouble(actives.Skip(2).Take(1)) / 100) + (MakeDouble(kickers) / 10000), HandType.TwoPairs);
+                return new HandEvaluation(actives, kickers, 2 + MakeDouble(actives.Take(1)) + (MakeDouble(actives.Skip(2).Take(1)) / 100) + (MakeDouble(kickers) / 10000), HandType.TwoPairs);
             }
 
             //Pair
@@ -135,24 +129,24 @@ namespace Poker
                 actives.AddRange(groupedByFace.Where(g => g.Count() == 2).OrderByDescending(g => (int)g.Key).First());
                 kickers.AddRange(cards.Where(c => !actives.Contains(c)).OrderByDescending(c => c.Face).Take(3));
 
-                return new HandEvaluation(actives, kickers, (double)1 + MakeDouble(actives.Take(1)) + (MakeDouble(kickers) / 100), HandType.Pair);
+                return new HandEvaluation(actives, kickers, 1 + MakeDouble(actives.Take(1)) + (MakeDouble(kickers) / 100), HandType.Pair);
             }
 
             //High card
             actives.Add(cards.OrderByDescending(c => c.Face).First());
             kickers.AddRange(cards.OrderByDescending(c => c.Face).Skip(1).Take(4));
 
-            return new HandEvaluation(actives, kickers, (double)0 + MakeDouble(actives) + (MakeDouble(kickers) / 100), HandType.HighCard);
+            return new HandEvaluation(actives, kickers, 0 + MakeDouble(actives) + (MakeDouble(kickers) / 100), HandType.HighCard);
         }
 
         private static double MakeDouble(IEnumerable<Card> cards)
         {
             double d = 0;
             int divisor = 100;
-            const double worth = (double)100.0 / 13;
+            const double worth = 100.0 / 13;
             foreach (int n in cards.Select(c => (int)c.Face).OrderByDescending(c => c))
             {
-                double c = (((double)(n - 2)) * worth) / divisor;
+                double c = ((n - 2) * worth) / divisor;
                 d += c;
                 divisor *= 100;
             }

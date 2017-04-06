@@ -1,46 +1,19 @@
-﻿using Newtonsoft.Json;
-using NLog;
+﻿using NLog;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Poker
 {
-    class Program
+    internal class Program
     {
         private static ILogger s_log = LogManager.GetCurrentClassLogger();
 
-        static void Verify()
-        {
-            int testCount = 1_000_000;
+        private static int wins = 0;
+        private static int tournaments = 0;
 
-            Dictionary<int, int> randomDist = new Dictionary<int, int>();
-            Dictionary<int, int> weightedRandomDist = new Dictionary<int, int>();
-
-            List<Tuple<int, double>> items = new List<Tuple<int, double>>();
-            for (int i = 0; i < 100; i++)
-            {
-                items.Add(Tuple.Create(i, 1.0));
-                randomDist[i] = 0;
-                weightedRandomDist[i] = 0;
-            }
-
-
-            for (int i = 0; i < testCount; i++)
-            {
-                randomDist[GlobalRandom.Next(100)]++;
-                weightedRandomDist[GlobalRandom.WeightedRandom(items)]++;
-            }
-        }
-
-        static int wins = 0;
-        static int tournaments = 0;
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.Unicode;
             Console.BackgroundColor = ConsoleColor.DarkGreen;
@@ -65,21 +38,6 @@ namespace Poker
                     new AiPlayer(simulator,predictor, staticData) { Name = "Dave" },
                     new AiPlayer(simulator,predictor, staticData) { Name = "Edward" },
                     new AiPlayer(simulator,predictor, staticData) { Name = "Fred" },
-                    //new NeuralNetPlayer(amount, true) { Name = "Gina" },
-                    //new NeuralNetPlayer(amount, true) { Name = "Harry" },
-                    //new NeuralNetPlayer(amount, true) { Name = "Ian" },
-
-                    //new AIPlayer(amount, winRates) { Name = "Bob" },
-                    //new AIPlayer(amount, winRates) { Name = "Charlie" },
-                    //new AIPlayer(amount, winRates) { Name = "Dave" },
-                    //new AIPlayer(amount, winRates) { Name = "Edward" },
-                    //new AIPlayer(amount, winRates) { Name = "Fred" },
-
-                    //new PotOddsEquityPlayer(amount) { Name = "Bob" },
-                    //new PotOddsEquityPlayer(amount) { Name = "Charlie" },
-                    //new PotOddsEquityPlayer(amount) { Name = "Dave" },
-                    //new PotOddsEquityPlayer(amount) { Name = "Edward" },
-                    //new PotOddsEquityPlayer(amount) { Name = "Fred" }
 
                     //new AlwaysCallPlayer(amount) { Name = "Bob" },
                     //new AlwaysCallPlayer(amount) { Name = "Charlie" },
@@ -150,7 +108,6 @@ namespace Poker
                     //Console.Clear();
                 }
             }
-            Console.ReadKey();
         }
 
         private static void PrintStatus(IEnumerable<IPlayer> players)
@@ -162,6 +119,5 @@ namespace Poker
             //    Console.WriteLine("{0}: {1}", p, p.Balance);
             //}
         }
-
     }
 }

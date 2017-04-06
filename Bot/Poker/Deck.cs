@@ -1,10 +1,7 @@
 ﻿using NLog;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Poker
 {
@@ -45,7 +42,7 @@ namespace Poker
         public Card Deal()
         {
             int idx = Interlocked.Increment(ref m_ptr);
-            return m_cards[idx-1];
+            return m_cards[idx - 1];
         }
 
         private void Shuffle()

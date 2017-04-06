@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 
 namespace Poker
 {
-    class Program
+    internal class Program
     {
-        const int NUM_BUCKETS = 169;
+        private const int NUM_BUCKETS = 169;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             MakeLookup(2);
             MakeLookup(5);
@@ -269,7 +269,7 @@ namespace Poker
                         }
 
                         bool isSmallBlind = false;
-                        decimal pot  = 0;
+                        decimal pot = 0;
                         //sb
                         Match sbMatch = null;
                         while (!(sbMatch = Regex.Match(lines[backptr], "posts small blind \\$(([0-9]|\\.)+)")).Success)
@@ -449,17 +449,17 @@ namespace Poker
                             throw new Exception("Bad potSizeWithoutContributions");
                         }
 
-                        var str = string.Format("{0}{1} {2}{3} {4} {5} {6} {7} {8} {9} {10} {11} {12} {13} {14} {15} {16} {17} {18}", 
-                            cardsMatch.Groups[1].Value, cardsMatch.Groups[2].Value, 
-                            cardsMatch.Groups[3].Value, cardsMatch.Groups[4].Value, 
-                            actPct, 
-                            numBigBlinds, 
-                            stackPct, 
-                            potPct, 
-                            avgStackPct, 
-                            numBettersBefore, 
-                            numPeopleToAct, 
-                            stackSizeVsAverage, 
+                        var str = string.Format("{0}{1} {2}{3} {4} {5} {6} {7} {8} {9} {10} {11} {12} {13} {14} {15} {16} {17} {18}",
+                            cardsMatch.Groups[1].Value, cardsMatch.Groups[2].Value,
+                            cardsMatch.Groups[3].Value, cardsMatch.Groups[4].Value,
+                            actPct,
+                            numBigBlinds,
+                            stackPct,
+                            potPct,
+                            avgStackPct,
+                            numBettersBefore,
+                            numPeopleToAct,
+                            stackSizeVsAverage,
                             numTimesActed,
                             numChecks,
                             numCalls,
