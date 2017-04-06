@@ -20,9 +20,11 @@ namespace Poker
             Console.ForegroundColor = ConsoleColor.White;
             Console.Clear();
 
+            string dataPath = "../datafiles";
             IHandEvaluator evaluator = new HandEvaluator();
+            evaluator = new LutEvaluator(evaluator, dataPath);
             ISimulator simulator = new Simulator(evaluator);
-            IStaticData staticData = new StaticData("../datafiles");
+            IStaticData staticData = new StaticData(dataPath);
             IHandPredictor predictor = new NeuralNetHandPredictor(staticData);
 
             while (true)

@@ -81,6 +81,7 @@
     <Compile Include="IPlayer.cs" />
     <Compile Include="ISimulator.cs" />
     <Compile Include="IStaticData.cs" />
+    <Compile Include="LutEvaluator.cs" />
     <Compile Include="NeuralNetHandPredictor.cs" />
     <Compile Include="AiPlayer.cs" />
     <Compile Include="Pot.cs" />

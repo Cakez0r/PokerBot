@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Poker
@@ -29,7 +30,15 @@ namespace Poker
         {
             DateTime start = DateTime.Now;
             var iter = new Combinations<int>(Enumerable.Range(0, 52).ToList(), numCards, GenerateOption.WithoutRepetition);
-            var scores = new ConcurrentDictionary<ulong, double>();
+            int capacity = 0;
+            switch (numCards)
+            {
+                case 2: capacity = 1326; break;
+                case 5: capacity = 2598960; break;
+                case 6: capacity = 20358520; break;
+                case 7: capacity = 133784560; break;
+            }
+            var scores = new ConcurrentDictionary<ulong, double>(16, capacity);
             HandEvaluator evaluator = new HandEvaluator();
             Parallel.ForEach(iter, (combo) =>
             {
@@ -38,7 +47,7 @@ namespace Poker
                 scores[Card.MakeHandBitmap(cards)] = score;
             });
 
-            using (BinaryWriter w = new BinaryWriter(File.OpenWrite(numCards.ToString() + ".LUT")))
+            using (BinaryWriter w = new BinaryWriter(File.OpenWrite(numCards.ToString() + ".lut")))
             {
                 foreach (var kv in scores)
                 {
