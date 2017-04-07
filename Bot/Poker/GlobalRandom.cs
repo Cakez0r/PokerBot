@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Random;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,7 +8,7 @@ namespace Poker
 {
     public static class GlobalRandom
     {
-        private static ThreadLocal<Random> s_random = new ThreadLocal<Random>(() => new Random((int)DateTime.UtcNow.Ticks + Thread.CurrentThread.ManagedThreadId));
+        private static ThreadLocal<Xorshift> s_random = new ThreadLocal<Xorshift>(() => new Xorshift(false));
 
         public static int Next()
         {
@@ -29,15 +30,16 @@ namespace Poker
             return s_random.Value.NextDouble();
         }
 
-        public static T WeightedRandom<T>(IEnumerable<Tuple<T, double>> weightedItems)
+        /// <summary>
+        /// WARN: Assumes all weights sum to 1.0
+        /// </summary>
+        public static T WeightedRandom<T>(IReadOnlyList<Tuple<T, double>> weightedItems)
         {
-            double sum = 1.0;// weightedItems.Sum(t => t.Item2);
-
             double rnd = s_random.Value.NextDouble();
-            rnd *= sum;
 
-            foreach (var item in weightedItems)
+            for (int i = 0; i < weightedItems.Count; i++)
             {
+                var item = weightedItems[i];
                 if (rnd < item.Item2)
                 {
                     return item.Item1;

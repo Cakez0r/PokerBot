@@ -1,8 +1,10 @@
 ﻿using NLog;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Poker
 {
@@ -24,11 +26,25 @@ namespace Poker
 
             string dataPath = "../datafiles";
             IHandEvaluator evaluator = new HandEvaluator();
-            //evaluator = new LutEvaluator(evaluator, dataPath);
-            evaluator = new MockEvaluator();
+            evaluator = new LutEvaluator(evaluator, dataPath);
+            //evaluator = new MockEvaluator();
             IStaticData staticData = new StaticData(dataPath);
             ISimulator simulator = new Simulator(evaluator, staticData);
             IHandPredictor predictor = new NeuralNetHandPredictor(staticData);
+
+            Dictionary<HandClass, double> winRates = new Dictionary<HandClass, double>();
+            var board = new Card[0];
+            foreach (var h in staticData.AllPossibleHands)
+            {
+                var hand = h.Expand();
+                winRates[h] = simulator.Simulate(hand[0][0], hand[0][1], board, new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights }, 100_000);
+                Console.WriteLine(h);
+            };
+
+            foreach (var wr in winRates.OrderByDescending(kv => kv.Value))
+            {
+                Console.WriteLine("{0}: {1}", wr.Key, wr.Value);
+            }
 
             if (!interactive)
             {
@@ -62,8 +78,8 @@ namespace Poker
                 {
                     player.Balance = amount;
                 }
-                alice.ShowPredictions = false;
-                alice.RaiseThreshold = 0.4;
+                alice.ShowPredictions = true;
+                //alice.RaiseThreshold = 0.4;
 
                 PrintStatus(players);
 
