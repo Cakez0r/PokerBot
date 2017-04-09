@@ -49,8 +49,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BetInfo.cs" />
+    <Compile Include="CardParser.cs" />
+    <Compile Include="HandHistoryParser.cs" />
+    <Compile Include="IHistoryParserRules.cs" />
+    <Compile Include="MatchInfo.cs" />
+    <Compile Include="PokerstarsHistoryParserRules.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SeatInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

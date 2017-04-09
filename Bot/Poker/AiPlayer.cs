@@ -178,7 +178,7 @@ namespace Poker
                 //Normalise all for table size?
                 double[] vector = new double[]
                 {
-                    (double)game.GetNumberOfPeopleToActAfter(player) / game.Players.Count,
+                    (double)game.GetNumberOfPeopleToActAfter(player) / (game.Players.Count - 1),
                     con / game.BigBlind,
                     con / (player.Balance + con),
                     con / (game.PotSize - con),

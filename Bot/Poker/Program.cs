@@ -15,7 +15,7 @@ namespace Poker
         private static int wins = 0;
         private static int tournaments = 0;
 
-        private static bool interactive = false;
+        private static bool interactive = true;
 
         private static void Main(string[] args)
         {
@@ -32,19 +32,19 @@ namespace Poker
             ISimulator simulator = new Simulator(evaluator, staticData);
             IHandPredictor predictor = new NeuralNetHandPredictor(staticData);
 
-            Dictionary<HandClass, double> winRates = new Dictionary<HandClass, double>();
-            var board = new Card[0];
-            foreach (var h in staticData.AllPossibleHands)
-            {
-                var hand = h.Expand();
-                winRates[h] = simulator.Simulate(hand[0][0], hand[0][1], board, new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights }, 100_000);
-                Console.WriteLine(h);
-            };
+            //Dictionary<HandClass, double> winRates = new Dictionary<HandClass, double>();
+            //var board = new Card[0];
+            //foreach (var h in staticData.AllPossibleHands)
+            //{
+            //    var hand = h.Expand();
+            //    winRates[h] = simulator.Simulate(hand[0][0], hand[0][1], board, new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights, staticData.EvenWeights }, 100_000);
+            //    Console.WriteLine(h);
+            //};
 
-            foreach (var wr in winRates.OrderByDescending(kv => kv.Value))
-            {
-                Console.WriteLine("{0}: {1}", wr.Key, wr.Value);
-            }
+            //foreach (var wr in winRates.OrderByDescending(kv => kv.Value))
+            //{
+            //    Console.WriteLine("{0}: {1}", wr.Key, wr.Value);
+            //}
 
             if (!interactive)
             {
@@ -137,8 +137,8 @@ namespace Poker
                     {
                         Console.WriteLine("Press any key for next hand...");
                         Console.ReadKey();
+                        Console.Clear();
                     }
-                    //Console.Clear();
                 }
             }
         }

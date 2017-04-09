@@ -26,15 +26,27 @@ def get_batch(data, batch_index, batch_size, slice_start, slice_end):
 
 def main(_):
   input_layer = tf.placeholder(tf.float32, [None, FEATURE_COUNT], 'input')
+
   weights_1 = tf.get_variable('weights_1', shape=[FEATURE_COUNT, HIDDEN_1_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([FEATURE_COUNT, HIDDEN_COUNT]))
   biases_1 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_1_COUNT]))
   hidden_layer_1 = tf.nn.relu(tf.matmul(input_layer, weights_1) + biases_1)
+
   weights_2 = tf.get_variable('weights_2', shape=[HIDDEN_1_COUNT, HIDDEN_2_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
   biases_2 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_2_COUNT]))
   hidden_layer_2 = tf.nn.relu(tf.matmul(hidden_layer_1, weights_2) + biases_2)
-  weights_3 = tf.get_variable('weights_3', shape=[HIDDEN_2_COUNT, CLASS_COUNT], initializer=tf.contrib.layers.xavier_initializer())
-  biases_3 = tf.Variable(tf.constant(0.1, shape=[CLASS_COUNT]))
-  output_layer = tf.matmul(hidden_layer_2, weights_3) + biases_3
+
+  weights_3 = tf.get_variable('weights_3', shape=[HIDDEN_2_COUNT, HIDDEN_2_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
+  biases_3 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_2_COUNT]))
+  hidden_layer_3 = tf.nn.relu(tf.matmul(hidden_layer_2, weights_3) + biases_3)
+
+  weights_4 = tf.get_variable('weights4', shape=[HIDDEN_2_COUNT, HIDDEN_2_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
+  biases_4 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_2_COUNT]))
+  hidden_layer_4 = tf.nn.relu(tf.matmul(hidden_layer_3, weights_4) + biases_4)
+
+  weights_5 = tf.get_variable('weights_5', shape=[HIDDEN_2_COUNT, CLASS_COUNT], initializer=tf.contrib.layers.xavier_initializer())
+  biases_5 = tf.Variable(tf.constant(0.1, shape=[CLASS_COUNT]))
+  output_layer = tf.matmul(hidden_layer_4, weights_5) + biases_5
+
   softmax_output = tf.nn.softmax(output_layer)
 
   output_actual = tf.placeholder(tf.float32, [None, CLASS_COUNT], 'output_actual')
@@ -50,7 +62,7 @@ def main(_):
 
   batch_size = 100
   batches_per_epoch = len(data) / batch_size
-  num_epochs = 5
+  num_epochs = 20
   iterations = batches_per_epoch * num_epochs
 
   for i in range(round(iterations)):

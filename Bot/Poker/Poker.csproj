@@ -70,6 +70,7 @@
     <Compile Include="Face.cs" />
     <Compile Include="GameRuleException.cs" />
     <Compile Include="GameRuleExceptionType.cs" />
+    <Compile Include="GameStateLog.cs" />
     <Compile Include="GlobalRandom.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="GameAction.cs" />
@@ -88,6 +89,7 @@
     <Compile Include="LutEvaluator.cs" />
     <Compile Include="MockEvaluator.cs" />
     <Compile Include="MockSimulator.cs" />
+    <Compile Include="NamedGameAction.cs" />
     <Compile Include="NeuralNetHandPredictor.cs" />
     <Compile Include="AiPlayer.cs" />
     <Compile Include="Pot.cs" />
