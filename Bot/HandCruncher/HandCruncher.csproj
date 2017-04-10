@@ -52,8 +52,10 @@
     <Compile Include="BetInfo.cs" />
     <Compile Include="CardParser.cs" />
     <Compile Include="HandHistoryParser.cs" />
+    <Compile Include="HistoryParserException.cs" />
     <Compile Include="IHistoryParserRules.cs" />
     <Compile Include="MatchInfo.cs" />
+    <Compile Include="ParserCheckInfo.cs" />
     <Compile Include="PokerstarsHistoryParserRules.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

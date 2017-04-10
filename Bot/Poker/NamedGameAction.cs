@@ -12,12 +12,13 @@ namespace Poker
 
         public bool IsRaise { get; set; }
 
-        public NamedGameAction(string name, GameActionType type, int amount) : base(type, amount)
+        public NamedGameAction(string name, GameActionType type, int amount, bool isRaise) : base(type, amount)
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
+            IsRaise = isRaise;
         }
 
-        public NamedGameAction(string name, GameActionType type) : this(name, type, 0)
+        public NamedGameAction(string name, GameActionType type) : this(name, type, 0, false)
         {
         }
     }

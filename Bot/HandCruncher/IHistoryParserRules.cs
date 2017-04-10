@@ -10,59 +10,74 @@ namespace HandCruncher
 {
     public interface IHistoryParserRules
     {
-        Regex GameStartExpr { get; }
-        Regex GameEndExpr { get; }
+        bool IsGameStart(string line);
 
-        Regex DealerSeatExpr { get; }
-        Regex SeatInfoExpr { get; }
+        bool IsGameEnd(string line);
 
-        Regex GameIdExpr { get; }
-        Regex TableIdExpr { get; }
+        ParserCheckInfo IsDealerSeat(string line);
 
-        Regex SmallBlindPostExpr { get; }
-        Regex BigBlindPostExpr { get; }
+        ParserCheckInfo IsSeatInfo(string line);
 
-        Regex PreflopStartExpr { get; }
-        Regex FlopStartExpr { get; }
-        Regex TurnStartExpr { get; }
-        Regex RiverStartExpr { get; }
+        ParserCheckInfo IsGameId(string line);
 
-        Regex FoldExpr { get; }
-        Regex RaiseExpr { get; }
-        Regex CallExpr { get; }
-        Regex BetExpr { get; }
-        Regex CheckExpr { get; }
+        ParserCheckInfo IsTableId(string line);
 
-        Regex ShowsCardsExpr { get; }
+        ParserCheckInfo IsSmallBlindPost(string line);
 
-        int GetDealerSeat(MatchInfo match);
+        ParserCheckInfo IsBigBlindPost(string line);
 
-        SeatInfo GetSeatInfo(MatchInfo match);
+        bool IsPreflopStart(string line);
 
-        string GetGameId(MatchInfo match);
+        ParserCheckInfo IsFlopStart(string line);
 
-        string GetTableId(MatchInfo match);
+        ParserCheckInfo IsTurnStart(string line);
 
-        BetInfo GetSmallBlindPost(MatchInfo match);
+        ParserCheckInfo IsRiverStart(string line);
 
-        BetInfo GetBigBlindPost(MatchInfo match);
+        ParserCheckInfo IsFold(string line);
 
-        Card[] GetFlopCards(MatchInfo match);
+        ParserCheckInfo IsRaise(string line);
 
-        Card GetTurnCard(MatchInfo match);
+        ParserCheckInfo IsCall(string line);
 
-        Card GetRiverCard(MatchInfo match);
+        ParserCheckInfo IsBet(string line);
 
-        string GetPlayerWhoFolded(MatchInfo match);
+        ParserCheckInfo IsCheck(string line);
 
-        string GetPlayerWhoChecked(MatchInfo match);
+        ParserCheckInfo IsShowCards(string line);
 
-        BetInfo GetRaise(MatchInfo match);
+        bool IsParseGameIndicator(string line);
 
-        BetInfo GetCall(MatchInfo match);
+        bool IsCorruptionIndicator(string line);
 
-        BetInfo GetBet(MatchInfo match);
+        int GetDealerSeat(ParserCheckInfo match);
 
-        Tuple<string, Card[]> GetShownCards(MatchInfo match);
+        SeatInfo GetSeatInfo(ParserCheckInfo match);
+
+        string GetGameId(ParserCheckInfo match);
+
+        string GetTableId(ParserCheckInfo match);
+
+        BetInfo GetSmallBlindPost(ParserCheckInfo match);
+
+        BetInfo GetBigBlindPost(ParserCheckInfo match);
+
+        Card[] GetFlopCards(ParserCheckInfo match);
+
+        Card GetTurnCard(ParserCheckInfo match);
+
+        Card GetRiverCard(ParserCheckInfo match);
+
+        string GetPlayerWhoFolded(ParserCheckInfo match);
+
+        string GetPlayerWhoChecked(ParserCheckInfo match);
+
+        BetInfo GetRaise(ParserCheckInfo match);
+
+        BetInfo GetCall(ParserCheckInfo match);
+
+        BetInfo GetBet(ParserCheckInfo match);
+
+        Tuple<string, Card[]> GetShownCards(ParserCheckInfo match);
     }
 }

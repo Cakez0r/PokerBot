@@ -19,205 +19,230 @@ namespace HandCruncher
 
         public IEnumerable<GameStateLog> GetGames(string[] lines)
         {
-            GameStateLog log = null;
-            IList<NamedGameAction> currentActionList = null;
-
             for (int i = 0; i < lines.Length; i++)
             {
-                Match match = null;
-
-                match = m_rules.GameEndExpr.Match(lines[i]);
-                if (match.Success)
+                if (m_rules.IsGameStart(lines[i]))
                 {
-                    if (log != null)
+                    bool parse = false;
+                    bool corrupt = false;
+                    int j = i;
+                    for (j = i; !m_rules.IsGameEnd(lines[j]); j++)
                     {
-                        yield return log;
+                        if (!parse && m_rules.IsParseGameIndicator(lines[j]))
+                        {
+                            parse = true;
+                        }
+
+                        if (!corrupt && m_rules.IsCorruptionIndicator(lines[j]))
+                        {
+                            corrupt = true;
+                            break;
+                        }
                     }
-                    log = null;
+
+                    if (parse && !corrupt)
+                    {
+                        ArraySegment<string> gameLines = new ArraySegment<string>(lines, i, j - i);
+                        GameStateLog log = null;
+                        try
+                        {
+                            log = GetLog(gameLines);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Failed to parse game: " + ex.ToString());
+                        }
+
+                        if (log != null)
+                        {
+                            yield return log;
+                        }
+                    }
+                }
+            }
+        }
+
+        private GameStateLog GetLog(IList<string> lines)
+        {
+            GameStateLog log = new GameStateLog();
+            IList<NamedGameAction> currentActionList = null;
+
+            foreach (string line in lines)
+            {
+                ParserCheckInfo pci = null;
+
+                pci = m_rules.IsFold(line);
+                if (pci.IsMatch)
+                {
+                    string folder = m_rules.GetPlayerWhoFolded(pci);
+                    currentActionList.Add(new NamedGameAction(folder, GameActionType.Fold));
                     continue;
                 }
 
-                try
+                pci = m_rules.IsBet(line);
+                if (pci.IsMatch)
                 {
-                    Func<Regex, Action<MatchInfo>, bool> ifMatch = (expr, a) =>
-                    {
-                        match = expr.Match(lines[i]);
-                        if (match.Success)
-                        {
-                            a(new MatchInfo(lines, match, i));
-                            return true;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    };
-
-                    if (ifMatch(m_rules.GameStartExpr, (m) => log = new GameStateLog()))
-                    {
-                        bool cardsShown = false;
-                        int j = i;
-                        for (j = i; !m_rules.GameEndExpr.IsMatch(lines[j]); j++)
-                        {
-                            if (m_rules.ShowsCardsExpr.IsMatch(lines[j]))
-                            {
-                                cardsShown = true;
-                                break;
-                            }
-                        }
-
-                        if (!cardsShown)
-                        {
-                            i = j + 1;
-                            log = null;
-                            continue;
-                        }
-                    }
-
-                    if (log == null)
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.FoldExpr, (m) => currentActionList.Add(new NamedGameAction(m_rules.GetPlayerWhoFolded(m), GameActionType.Fold))))
-                    {
-                        continue;
-                    }
-                    if (ifMatch(m_rules.CheckExpr, (m) => currentActionList.Add(new NamedGameAction(m_rules.GetPlayerWhoChecked(m), GameActionType.Check))))
-                    {
-                        continue;
-                    }
-                    if (ifMatch(m_rules.RaiseExpr, (m) =>
-                    {
-                        BetInfo bi = m_rules.GetRaise(m);
-                        currentActionList.Add(new NamedGameAction(bi.Name, GameActionType.Bet, bi.Amount) { IsRaise = true });
-                    }))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.BetExpr, (m) =>
-                    {
-                        BetInfo bi = m_rules.GetBet(m);
-                        currentActionList.Add(new NamedGameAction(bi.Name, GameActionType.Bet, bi.Amount) { IsRaise = true });
-                    }))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.CallExpr, (m) =>
-                    {
-                        BetInfo bi = m_rules.GetCall(m);
-                        currentActionList.Add(new NamedGameAction(bi.Name, GameActionType.Bet, bi.Amount));
-                    }))
-                    {
-                        continue;
-                    }
-
-                    bool seatInfoMatch = ifMatch(m_rules.SeatInfoExpr, (m) =>
-                    {
-                        SeatInfo si = m_rules.GetSeatInfo(m);
-                        log.Seats[si.Name] = si.SeatNumber;
-                        log.StartBalances[si.Name] = si.Balance;
-                    });
-                    if (lines[i].StartsWith("Seat") && lines[i].TrimEnd(' ').EndsWith("chips)") && !seatInfoMatch)
-                    {
-                        Console.WriteLine("Corrupt player id");
-                        log = null;
-                        continue;
-                    }
-
-                    if (seatInfoMatch)
-                    {
-                        continue;
-                    }
-
-                    if (lines[i].StartsWith("Table") && !ifMatch(m_rules.DealerSeatExpr, (m) => log.DealerSeat = m_rules.GetDealerSeat(m)))
-                    {
-                        Console.WriteLine("Corrupt table id");
-                        log = null;
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.GameIdExpr, (m) => log.GameId = m_rules.GetGameId(m)))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.SmallBlindPostExpr, (m) =>
-                    {
-                        BetInfo bi = m_rules.GetSmallBlindPost(m);
-                        log.SmallBlind = bi.Amount;
-                    }))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.BigBlindPostExpr, (m) =>
-                    {
-                        BetInfo bi = m_rules.GetBigBlindPost(m);
-                        log.BigBlind = bi.Amount;
-                    }))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.TableIdExpr, (m) => log.TableId = m_rules.GetTableId(m)))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.PreflopStartExpr, (m) => currentActionList = log.PreflopActions))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.FlopStartExpr, (m) =>
-                    {
-                        currentActionList = log.FlopActions;
-                        Card[] cards = m_rules.GetFlopCards(m);
-                        foreach (var card in cards)
-                        {
-                            log.BoardCards.Add(card);
-                        }
-                    }))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.TurnStartExpr, (m) =>
-                    {
-                        currentActionList = log.TurnActions;
-                        Card card = m_rules.GetTurnCard(m);
-                        log.BoardCards.Add(card);
-                    }))
-                    {
-                        continue;
-                    }
-
-                    if (ifMatch(m_rules.RiverStartExpr, (m) =>
-                    {
-                        currentActionList = log.RiverActions;
-                        Card card = m_rules.GetRiverCard(m);
-                        log.BoardCards.Add(card);
-                    }))
-                    {
-                        continue;
-                    }
-
-                    ifMatch(m_rules.ShowsCardsExpr, (m) =>
-                    {
-                        var cards = m_rules.GetShownCards(m);
-                        log.KnownHoleCards[cards.Item1] = cards.Item2;
-                    });
+                    var bi = m_rules.GetBet(pci);
+                    currentActionList.Add(new NamedGameAction(bi.Name, GameActionType.Bet, bi.Amount, true));
+                    continue;
                 }
-                catch (Exception ex)
+
+                pci = m_rules.IsCall(line);
+                if (pci.IsMatch)
                 {
-                    Console.WriteLine("Parse failure " + ex.ToString());
-                    log = null;
+                    var bi = m_rules.GetCall(pci);
+                    currentActionList.Add(new NamedGameAction(bi.Name, GameActionType.Bet, bi.Amount, false));
+                    continue;
+                }
+
+                pci = m_rules.IsRaise(line);
+                if (pci.IsMatch)
+                {
+                    var bi = m_rules.GetRaise(pci);
+                    currentActionList.Add(new NamedGameAction(bi.Name, GameActionType.Bet, bi.Amount, true));
+                    continue;
+                }
+
+                pci = m_rules.IsBigBlindPost(line);
+                if (pci.IsMatch)
+                {
+                    var bi = m_rules.GetBigBlindPost(pci);
+                    log.BigBlind = bi.Amount;
+                    continue;
+                }
+
+                pci = m_rules.IsCheck(line);
+                if (pci.IsMatch)
+                {
+                    string checker = m_rules.GetPlayerWhoChecked(pci);
+                    currentActionList.Add(new NamedGameAction(checker, GameActionType.Check));
+                    continue;
+                }
+
+                pci = m_rules.IsDealerSeat(line);
+                if (pci.IsMatch)
+                {
+                    int button = m_rules.GetDealerSeat(pci);
+                    log.DealerSeat = button;
+                    continue;
+                }
+
+                pci = m_rules.IsFlopStart(line);
+                if (pci.IsMatch)
+                {
+                    currentActionList = log.FlopActions;
+                    var cards = m_rules.GetFlopCards(pci);
+                    for (int i = 0; i < 3; i++)
+                    {
+                        log.BoardCards.Add(cards[i]);
+                    }
+                    continue;
+                }
+
+                pci = m_rules.IsGameId(line);
+                if (pci.IsMatch)
+                {
+                    string id = m_rules.GetGameId(pci);
+                    log.GameId = id;
+                    continue;
+                }
+
+                bool preflopStart = m_rules.IsPreflopStart(line);
+                if (preflopStart)
+                {
+                    currentActionList = log.PreflopActions;
+                    continue;
+                }
+
+                pci = m_rules.IsRiverStart(line);
+                if (pci.IsMatch)
+                {
+                    currentActionList = log.RiverActions;
+                    var card = m_rules.GetRiverCard(pci);
+                    log.BoardCards.Add(card);
+                    continue;
+                }
+
+                pci = m_rules.IsSeatInfo(line);
+                if (pci.IsMatch)
+                {
+                    var si = m_rules.GetSeatInfo(pci);
+                    log.Seats[si.Name] = si.SeatNumber;
+                    log.StartBalances[si.Name] = si.Balance;
+                    continue;
+                }
+
+                pci = m_rules.IsShowCards(line);
+                if (pci.IsMatch)
+                {
+                    var cards = m_rules.GetShownCards(pci);
+                    log.KnownHoleCards[cards.Item1] = cards.Item2;
+                    continue;
+                }
+
+                pci = m_rules.IsSmallBlindPost(line);
+                if (pci.IsMatch)
+                {
+                    var bi = m_rules.GetSmallBlindPost(pci);
+                    log.SmallBlind = bi.Amount;
+                    continue;
+                }
+
+                pci = m_rules.IsTableId(line);
+                if (pci.IsMatch)
+                {
+                    string tableId = m_rules.GetTableId(pci);
+                    log.TableId = tableId;
+                    continue;
+                }
+
+                pci = m_rules.IsTurnStart(line);
+                if (pci.IsMatch)
+                {
+                    currentActionList = log.TurnActions;
+                    var card = m_rules.GetTurnCard(pci);
+                    log.BoardCards.Add(card);
                     continue;
                 }
             }
+
+            if (log.SmallBlind == 0)
+            {
+                throw new HistoryParserException("Invalid small blind");
+            }
+
+            if (log.BigBlind == 0)
+            {
+                throw new HistoryParserException("Invalid big blind");
+            }
+
+            if (!log.Seats.Any(kv => kv.Value == log.DealerSeat))
+            {
+                throw new HistoryParserException("Missing dealer name");
+            }
+
+            if (log.Seats.Count() != log.StartBalances.Count())
+            {
+                throw new HistoryParserException("Mismatched seats and start balances");
+            }
+
+            Dictionary<string, int> spends = new Dictionary<string, int>();
+            foreach (var kv in log.Seats)
+            {
+                spends[kv.Key] = 0;
+            }
+
+            foreach (var act in log.PreflopActions.Concat(log.FlopActions).Concat(log.TurnActions).Concat(log.RiverActions))
+            {
+                spends[act.Name] += act.Amount;
+            }
+
+            if (spends.Any(s => s.Value > log.StartBalances[s.Key]))
+            {
+                throw new HistoryParserException("Spent more than start balance");
+            }
+
+            return log;
         }
     }
 }

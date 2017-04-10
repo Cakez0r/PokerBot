@@ -376,7 +376,7 @@ namespace Poker
                             break;
                     }
 
-                    actionList.Add(new NamedGameAction(playerToAct.ToString(), act.Type, act.Amount) { IsRaise = isRaise });
+                    actionList.Add(new NamedGameAction(playerToAct.ToString(), act.Type, act.Amount, isRaise));
 
                     foreach (var p in Players)
                     {
