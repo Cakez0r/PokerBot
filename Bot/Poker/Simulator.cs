@@ -51,6 +51,7 @@ namespace Poker
         {
             int wins = 0;
 
+            Dictionary<HandClass, int> losses = new Dictionary<HandClass, int>();
             Parallel.For(0, sampleCount, (n) =>
             {
                 Card[] board = new Card[5];
@@ -99,11 +100,13 @@ namespace Poker
                 var myScore = m_evaluator.EvaluateScore(board.Concat(hand));
 
                 bool lost = false;
+                Card[] oppHand = null;
                 for (int i = 0; i < oppponents.Count; i++)
                 {
                     var opponentScore = m_evaluator.EvaluateScore(board.Concat(oppponents[i]));
                     if (opponentScore > myScore)
                     {
+                        oppHand = oppponents[i];
                         lost = true;
                         break;
                     }
@@ -113,7 +116,24 @@ namespace Poker
                 {
                     Interlocked.Increment(ref wins);
                 }
+                else
+                {
+                    HandClass oc = HandClass.FromCards(oppHand[0], oppHand[1]);
+                    lock (losses)
+                    {
+                        if (!losses.ContainsKey(oc))
+                        {
+                            losses[oc] = 0;
+                        }
+                        losses[oc]++;
+                    }
+                }
             });
+
+            foreach (var l in losses.OrderByDescending(kv => kv.Value).Take(10))
+            {
+                Console.WriteLine("Lose to {0}", l.Key);
+            }
 
             return (double)wins / sampleCount;
         }

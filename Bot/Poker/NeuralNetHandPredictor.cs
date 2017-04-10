@@ -16,7 +16,7 @@ namespace Poker
             m_staticData = staticData ?? throw new ArgumentNullException(nameof(staticData));
         }
 
-        public IReadOnlyList<Tuple<HandClass, double>> Estimate(IReadOnlyList<double> predictionVector)
+        public IReadOnlyList<Tuple<HandClass, double>> Estimate(HandState state, IReadOnlyList<double> predictionVector)
         {
             //StringBuilder args = new StringBuilder();
             //args.Append("pokerai_run.py ");
@@ -41,7 +41,7 @@ namespace Poker
 
             //string result = p.StandardOutput.ReadToEnd();
 
-            var request = new RestRequest("poker", Method.POST);
+            var request = new RestRequest(state.ToString().ToLower(), Method.POST);
             request.AddJsonBody(predictionVector);
             var response = m_rc.Post(request);
             double[] probabilities = JsonConvert.DeserializeObject<double[]>(response.Content);

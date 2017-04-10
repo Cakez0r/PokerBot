@@ -58,7 +58,7 @@ namespace Poker
                 var alice = new AiPlayer(simulator, predictor, staticData) { Name = "Alice" };
                 List<IPlayer> players = new List<IPlayer>()
                 {
-                    //new ConsoleInteractivePlayer(amount) { Name = "Lewis" },
+                    new ConsoleInteractivePlayer(amount) { Name = "Lewis" },
 
                     alice,
                     new AiPlayer(simulator,predictor, staticData) { Name = "Bob" },

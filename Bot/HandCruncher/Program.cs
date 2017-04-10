@@ -19,6 +19,30 @@ namespace Poker
 
         private static void Main(string[] args)
         {
+            ConcurrentDictionary<HandClass, int> dict = new ConcurrentDictionary<HandClass, int>();
+            Parallel.ForEach(GetFilesRecursive(@"D:\Poker data\Pty"), (fileName) =>
+            {
+                string[] lines = File.ReadAllLines(fileName);
+                foreach (string s in lines)
+                {
+                    //if (s.Contains("showed") && !s.Contains("said"))
+                    if (s.Contains("shows"))
+                    {
+                        try
+                        {
+                            var splits = s.Split('[', ']');
+                            var a = CardParser.MakeCard(splits[1].Substring(1, 2));
+                            var b = CardParser.MakeCard(splits[1].Substring(5, 2));
+                            var c = HandClass.FromCards(a, b);
+                            dict.AddOrUpdate(c, 1, (h, i) => i + 1);
+                        }
+                        catch { }
+                    }
+                }
+                //dict.AddOrUpdate()
+            });
+
+            File.WriteAllLines("rep2", dict.OrderByDescending(kv => kv.Value).Select(kv => kv.Key.ToString() + " - " + kv.Value));
             /*
              * cardsMatch.Groups[1].Value, cardsMatch.Groups[2].Value,
                 cardsMatch.Groups[3].Value, cardsMatch.Groups[4].Value,
@@ -68,109 +92,36 @@ namespace Poker
                             continue;
                         }
 
+                        //if (game.BoardCards.Count < 3)
+                        //{
+                        //    continue;
+                        //}
+
+                        //if (game.FlopActions.Count == 0)
+                        //{
+                        //    continue;
+                        //}
+
+                        //if (game.FlopActions.Select(kv => kv.Name).Distinct().Count() == 1)
+                        //{
+                        //    continue;
+                        //}
+
                         foreach (var kvp in game.KnownHoleCards)
                         {
-                            int preflopBetsBefore = 0;
-                            int preflopActsBefore = 0;
-                            int preflopActsAfter = 0;
+                            double[] vector = game.MakeVector(kvp.Key, HandState.Preflop);
 
-                            bool after = false;
-                            for (int i = 0; i < game.Seats.Count; i++)
-                            {
-                                if (game.PreflopActions[i].Name == kvp.Key)
-                                {
-                                    after = true;
-                                    continue;
-                                }
-
-                                if (after)
-                                {
-                                    preflopActsAfter++;
-                                }
-                                else
-                                {
-                                    if (game.PreflopActions[i].Type == GameActionType.Bet)
-                                    {
-                                        preflopBetsBefore++;
-                                    }
-                                    preflopActsBefore++;
-                                }
-                            }
-                            double preflopBet = (double)game.PreflopActions.Where(a => a.Name == kvp.Key).Sum(a => a.Amount);
-                            double preflopPot = (double)game.PreflopActions.Sum(a => a.Amount) + game.SmallBlind + game.BigBlind;
-                            double avgStack = game.StartBalances.Values.Average();
-
-                            double[] preflopVector = new double[15]
-                            {
-                                (double)preflopActsAfter / (game.Seats.Count - 1),
-                                preflopBet / game.BigBlind,
-                                preflopBet / game.StartBalances[kvp.Key],
-                                preflopBet / (preflopPot - preflopBet),
-                                preflopBet / avgStack,
-                                preflopBetsBefore,
-                                preflopActsAfter,
-                                game.StartBalances[kvp.Key] / avgStack,
-                                game.PreflopActions.Count(a => a.Name == kvp.Key),
-                                game.PreflopActions.Count(a => a.Name == kvp.Key && a.Type == GameActionType.Check),
-                                game.PreflopActions.Count(a => a.Name == kvp.Key && a.Type == GameActionType.Bet && !a.IsRaise),
-                                game.PreflopActions.Count(a => a.Name == kvp.Key && a.Type == GameActionType.Bet && a.IsRaise),
-                                (preflopPot - preflopBet) / game.BigBlind,
-                                game.Seats.Concat(game.Seats).SkipWhile(kv => kv.Value != game.DealerSeat).Skip(2).First().Key == kvp.Key ? 1 : 0,
-                                game.Seats.Concat(game.Seats).SkipWhile(kv => kv.Value != game.DealerSeat).Skip(1).First().Key == kvp.Key ? 1 : 0
-                            };
-
-                            int flopPlayers = game.FlopActions.Select(kv => kv.Name).Distinct().Count();
-                            int flopBetsBefore = 0;
-                            int flopActsBefore = 0;
-                            int flopActsAfter = 0;
-                            after = false;
-                            for (int i = 0; i < flopPlayers; i++)
-                            {
-                                if (game.FlopActions[i].Name == kvp.Key)
-                                {
-                                    after = true;
-                                    continue;
-                                }
-
-                                if (after)
-                                {
-                                    flopActsAfter++;
-                                }
-                                else
-                                {
-                                    if (game.PreflopActions[i].Type == GameActionType.Bet)
-                                    {
-                                        flopBetsBefore++;
-                                    }
-                                    flopActsBefore++;
-                                }
-                            }
-
-                            double flopBet = (double)game.FlopActions.Where(a => a.Name == kvp.Key).Sum(a => a.Amount);
-                            double flopPot = preflopPot + (double)game.FlopActions.Sum(a => a.Amount);
-
-                            double[] flopVector = new double[12]
-                            {
-                                (double)flopActsAfter / (flopPlayers - 1),
-                                flopBet / game.BigBlind,
-                                flopBet / game.StartBalances[kvp.Key],
-                                flopBet / (flopPot - flopBet),
-                                flopBet / avgStack,
-                                flopBetsBefore,
-                                flopActsAfter,
-                                game.FlopActions.Count(a => a.Name == kvp.Key),
-                                game.FlopActions.Count(a => a.Name == kvp.Key && a.Type == GameActionType.Check),
-                                game.FlopActions.Count(a => a.Name == kvp.Key && a.Type == GameActionType.Bet && !a.IsRaise),
-                                game.FlopActions.Count(a => a.Name == kvp.Key && a.Type == GameActionType.Bet && a.IsRaise),
-                                (flopPot - flopBet) / game.BigBlind
-                            };
+                            //if (double.IsNaN(vector[15]))
+                            //{
+                            //    int bp = 0;
+                            //}
 
                             HandClass cls = HandClass.FromCards(kvp.Value[0], kvp.Value[1]);
                             int bucket = ordering[cls];
                             string label = MakeLabel(bucket);
                             lock (vectors)
                             {
-                                vectors.Add(preflopVector);
+                                vectors.Add(vector);
                                 labels.Add(label);
                             }
                         }
@@ -208,8 +159,8 @@ namespace Poker
             }
 
             File.WriteAllText("average.json", JsonConvert.SerializeObject(avg));
-            File.WriteAllLines("labels", labels);
-            File.WriteAllLines("data", vectors.Select(v => string.Join(" ", v)));
+            File.WriteAllLines("preflop_labels", labels);
+            File.WriteAllLines("preflop_data", vectors.Select(v => string.Join(" ", v)));
             // ParseFiles();
             // MakeLabelsAndData();
         }
@@ -318,7 +269,7 @@ namespace Poker
             string[] lines = File.ReadAllLines("data.txt");
             List<string> labels = new List<string>();
             List<double[]> data = new List<double[]>();
-            double[] avg = new double[15];
+            double[] avg = new double[data.First().Length];
             foreach (string line in lines)
             {
                 Card a = new Card(CardParser.CharToSuit(line[1]), CardParser.CharToFace(line[0]));

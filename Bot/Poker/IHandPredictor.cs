@@ -5,6 +5,6 @@ namespace Poker
 {
     public interface IHandPredictor
     {
-        IReadOnlyList<Tuple<HandClass, double>> Estimate(IReadOnlyList<double> predictionVector);
+        IReadOnlyList<Tuple<HandClass, double>> Estimate(HandState state, IReadOnlyList<double> predictionVector);
     }
 }

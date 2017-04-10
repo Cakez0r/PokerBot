@@ -9,10 +9,7 @@ namespace Poker
     {
         private class PlayerData
         {
-            public int NumChecks { get; set; }
-            public int NumCalls { get; set; }
-            public int NumRaises { get; set; }
-            public int Contributions { get; set; }
+            public double[] Vector { get; set; }
             public IReadOnlyList<Tuple<HandClass, double>> Weights { get; set; }
         }
 
@@ -36,7 +33,8 @@ namespace Poker
 
         private ISimulator m_simulator;
 
-        private Dictionary<IPlayer, PlayerData> m_data = new Dictionary<IPlayer, PlayerData>();
+        private Dictionary<IPlayer, PlayerData> m_preflopData = new Dictionary<IPlayer, PlayerData>();
+        private Dictionary<IPlayer, PlayerData> m_flopData = new Dictionary<IPlayer, PlayerData>();
 
         private Game m_currentHand = null;
 
@@ -51,12 +49,24 @@ namespace Poker
         {
             if (game != m_currentHand)
             {
-                m_data.Clear();
+                m_preflopData.Clear();
                 m_currentHand = game;
             }
 
             var ct = HandClass.FromCards(Hole[0], Hole[1]);
-            var opponentHandWeightings = new List<IReadOnlyList<Tuple<HandClass, double>>>(m_data.Select(kv => kv.Value.Weights));
+            var opponentHandWeightings = new List<IReadOnlyList<Tuple<HandClass, double>>>();
+            foreach (var player in game.Players)
+            {
+                IReadOnlyList<Tuple<HandClass, double>> weights = null;
+                if (m_flopData.ContainsKey(player))
+                {
+                    weights = m_flopData[player].Weights;
+                }
+                else if (m_preflopData.ContainsKey(player))
+                {
+                    weights = m_preflopData[player].Weights;
+                }
+            }
             for (int i = 0; i < game.NumberOfPlayersInHand - opponentHandWeightings.Count; i++)
             {
                 opponentHandWeightings.Add(m_staticData.EvenWeights);
@@ -120,87 +130,88 @@ namespace Poker
         {
             if (m_currentHand != game)
             {
-                m_data.Clear();
+                m_preflopData.Clear();
+                m_flopData.Clear();
                 m_currentHand = game;
+            }
+
+            if (player == this)
+            {
+                return;
             }
 
             if (game.State == HandState.Preflop)
             {
-                if (player == this)
-                {
-                    return;
-                }
-
                 if (game.HasFolded(player))
                 {
-                    if (m_data.ContainsKey(player))
+                    if (m_preflopData.ContainsKey(player))
                     {
-                        m_data.Remove(player);
+                        m_preflopData.Remove(player);
                     }
 
                     return;
                 }
 
-                if (!m_data.ContainsKey(player))
+                if (!m_preflopData.ContainsKey(player))
                 {
-                    m_data[player] = new PlayerData();
+                    m_preflopData[player] = new PlayerData();
                 }
 
-                var data = m_data[player];
+                var data = m_preflopData[player];
 
-                data.Contributions += action.Amount;
-                if (action.Type == GameActionType.Check)
-                {
-                    data.NumChecks++;
-                }
-                else
-                {
-                    if (action.Amount > amountToCall)
-                    {
-                        data.NumRaises++;
-                    }
-                    else
-                    {
-                        data.NumCalls++;
-                    }
-                }
+                double[] vector = game.Log.MakeVector(player.ToString(), HandState.Preflop);
 
-                double con = data.Contributions;
-                if (game.GetIPlayerAfterButton(1) == player)
-                {
-                    con -= game.SmallBlind;
-                }
-                else if (game.GetIPlayerAfterButton(2) == player)
-                {
-                    con -= game.BigBlind;
-                }
-
-                //Normalise all for table size?
-                double[] vector = new double[]
-                {
-                    (double)game.GetNumberOfPeopleToActAfter(player) / (game.Players.Count - 1),
-                    con / game.BigBlind,
-                    con / (player.Balance + con),
-                    con / (game.PotSize - con),
-                    con / (double)game.Players.Average(p => p.Balance),
-                    game.GetBettersBefore(player),
-                    game.GetNumberOfPeopleToActAfter(player),
-                    (double)player.Balance / game.Players.Average(p => p.Balance),
-                    data.NumCalls + data.NumChecks + data.NumRaises,
-                    data.NumChecks,
-                    data.NumCalls,
-                    data.NumRaises,
-                    (double)(game.PotSize - data.Contributions) / game.BigBlind,
-                    game.GetIPlayerAfterButton(2) == player ? 1.0 : 0.0,
-                    game.GetIPlayerAfterButton(1) == player ? 1.0 : 0.0
-                };
-
+                data.Vector = vector;
                 for (int i = 0; i < vector.Length; i++)
                 {
-                    vector[i] -= m_staticData.AveragePredictionVector[i];
+                    vector[i] -= m_staticData.AveragePreflopPredictionVector[i];
+                }
+                data.Weights = m_predictor.Estimate(HandState.Preflop, Array.AsReadOnly(vector));
+
+                if (ShowPredictions)
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        s_log.Debug("{0} might have {1} ({2})", player, data.Weights[i].Item1, data.Weights[i].Item2);
+                    }
+                    HandClass c = HandClass.FromCards(player.Hole[0], player.Hole[1]);
+                    var actual = data.Weights.First(t => t.Item1.A == c.A && t.Item1.B == c.B && t.Item1.Suited == c.Suited);
+                    s_log.Debug("{0} might have {1} ({2})", player, actual.Item1, actual.Item2);
+                }
+            }
+
+            if (game.State == HandState.Flop)
+            {
+                if (game.HasFolded(player))
+                {
+                    if (m_preflopData.ContainsKey(player))
+                    {
+                        m_preflopData.Remove(player);
+                    }
+
+                    if (m_flopData.ContainsKey(player))
+                    {
+                        m_flopData.Remove(player);
+                    }
+
+                    return;
                 }
 
-                data.Weights = m_predictor.Estimate(Array.AsReadOnly(vector));
+                if (!m_flopData.ContainsKey(player))
+                {
+                    m_flopData[player] = new PlayerData();
+                }
+
+                var data = m_flopData[player];
+
+                double[] vector = game.Log.MakeVector(player.ToString(), HandState.Flop);
+
+                data.Vector = vector;
+                for (int i = 0; i < vector.Length; i++)
+                {
+                    vector[i] -= m_staticData.AverageFlopPredictionVector[i];
+                }
+                data.Weights = m_predictor.Estimate(HandState.Flop, Array.AsReadOnly(vector));
 
                 if (ShowPredictions)
                 {

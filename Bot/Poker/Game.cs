@@ -17,6 +17,8 @@ namespace Poker
 
         public IList<Card> Board { get; private set; } = new List<Card>(5);
 
+        public GameStateLog Log { get; private set; } = new GameStateLog();
+
         public int NumberOfPlayersInHand
         {
             get => Players.Count - m_folded.Count;
@@ -60,6 +62,17 @@ namespace Poker
             Dealer = dealer;
             m_pots.Add(new Pot());
             m_initialised = true;
+            Log.BigBlind = BigBlind;
+            Log.SmallBlind = SmallBlind;
+            Log.DealerSeat = Dealer;
+            Log.GameId = Guid.NewGuid().ToString();
+            Log.TableId = Guid.NewGuid().ToString();
+            for (int i = 0; i < players.Count; i++)
+            {
+                var player = players[i];
+                Log.StartBalances[player.ToString()] = player.Balance;
+                Log.Seats[player.ToString()] = i;
+            }
         }
 
         public int GetNumberOfPeopleToActAfter(IPlayer player)
@@ -268,7 +281,7 @@ namespace Poker
                 if (!(m_allIn.Contains(playerToAct) || m_folded.Contains(playerToAct)))
                 {
                     int contribution = contributions[playerToAct];
-
+                    bool isRaise = false;
                     int amountToCall = highestBet - contribution;
 
                     s_log.Info("{0} to act (balance {1})", playerToAct, playerToAct.Balance);
@@ -286,6 +299,10 @@ namespace Poker
                     {
                         s_log.Info("{0} folds", playerToAct);
                         m_folded.Add(playerToAct);
+                        foreach (var pot in m_pots)
+                        {
+                            pot.EligibleWinners.Remove(playerToAct);
+                        }
                     }
                     else if (act.Type == GameActionType.Bet)
                     {
@@ -301,6 +318,7 @@ namespace Poker
 
                         if (raiseAmount > 0)
                         {
+                            isRaise = true;
                             if (playerToAct.Balance == 0)
                             {
                                 s_log.Info("{0} raises all for {1} more (total {2})", playerToAct, raiseAmount, contributions[playerToAct]);
@@ -337,6 +355,28 @@ namespace Poker
                             }
                         }
                     }
+
+                    IList<NamedGameAction> actionList = null;
+                    switch (State)
+                    {
+                        case HandState.Preflop:
+                            actionList = Log.PreflopActions;
+                            break;
+
+                        case HandState.Flop:
+                            actionList = Log.FlopActions;
+                            break;
+
+                        case HandState.Turn:
+                            actionList = Log.TurnActions;
+                            break;
+
+                        case HandState.River:
+                            actionList = Log.RiverActions;
+                            break;
+                    }
+
+                    actionList.Add(new NamedGameAction(playerToAct.ToString(), act.Type, act.Amount) { IsRaise = isRaise });
 
                     foreach (var p in Players)
                     {
@@ -446,6 +486,10 @@ namespace Poker
                     Board.Add(m_deck.Deal());
                     Board.Add(m_deck.Deal());
                     Board.Add(m_deck.Deal());
+                    for (int i = 0; i < 3; i++)
+                    {
+                        Log.BoardCards.Add(Board[i]);
+                    }
                     s_log.Info("Board is {0} {1} {2}", Board[0], Board[1], Board[2]);
                     DoOrbit();
                     if (Players.Count - m_folded.Count == 1)
@@ -463,6 +507,7 @@ namespace Poker
                     s_log.Info("----------");
                     s_log.Info("Turn");
                     Board.Add(m_deck.Deal());
+                    Log.BoardCards.Add(Board[3]);
                     s_log.Info("Board is {0} {1} {2} {3}", Board[0], Board[1], Board[2], Board[3]);
                     DoOrbit();
                     if (Players.Count - m_folded.Count == 1)
@@ -480,6 +525,7 @@ namespace Poker
                     s_log.Info("----------");
                     s_log.Info("River");
                     Board.Add(m_deck.Deal());
+                    Log.BoardCards.Add(Board[4]);
                     s_log.Info("Board is {0} {1} {2} {3} {4}", Board[0], Board[1], Board[2], Board[3], Board[4]);
                     DoOrbit();
                     ResolvePots();
