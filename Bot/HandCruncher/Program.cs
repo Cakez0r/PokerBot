@@ -19,10 +19,11 @@ namespace Poker
 
         private static void Main(string[] args)
         {
-            MakeTrainingData(@"D:\Poker data\PS");
+            MakeTrainingData<PokerstarsHistoryParserRules>(@"D:\Poker data\PS");
+            MakeTrainingData<PartyPokerHistoryParserRules>(@"D:\Poker data\PTY");
         }
 
-        private static void MakeTrainingData(string folder)
+        private static void MakeTrainingData<T>(string folder) where T : IHistoryParserRules, new()
         {
             Dictionary<HandClass, int> ordering = new Dictionary<HandClass, int>();
             List<HandClass> loadedHands = JsonConvert.DeserializeObject<List<HandClass>>(File.ReadAllText("../../../../datafiles/ordering.json"));
@@ -38,9 +39,10 @@ namespace Poker
             List<string> labels = new List<string>();
             HandState state = HandState.Preflop;
             Parallel.ForEach(GetFilesRecursive(folder), (fileName) =>
-            //foreach (string fileName in GetFilesRecursive(@"D:\Poker data\PS"))
+            //foreach (string fileName in GetFilesRecursive(folder))
             {
-                HandHistoryParser parser = new HandHistoryParser(new PokerstarsHistoryParserRules());
+                var parserRules = new T();
+                HandHistoryParser parser = new HandHistoryParser(parserRules);
                 foreach (var game in parser.GetGames(File.ReadAllLines(fileName)))
                 {
                     try

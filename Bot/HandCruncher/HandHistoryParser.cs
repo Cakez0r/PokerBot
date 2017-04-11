@@ -26,18 +26,28 @@ namespace HandCruncher
                     bool parse = false;
                     bool corrupt = false;
                     int j = i;
-                    for (j = i; !m_rules.IsGameEnd(lines[j]); j++)
-                    {
-                        if (!parse && m_rules.IsParseGameIndicator(lines[j]))
-                        {
-                            parse = true;
-                        }
 
-                        if (!corrupt && m_rules.IsCorruptionIndicator(lines[j]))
+                    try
+                    {
+                        for (j = i; !m_rules.IsGameEnd(lines[j]); j++)
                         {
-                            corrupt = true;
-                            break;
+                            if (!parse && m_rules.IsParseGameIndicator(lines[j]))
+                            {
+                                parse = true;
+                            }
+
+                            if (!corrupt && m_rules.IsCorruptionIndicator(lines[j]))
+                            {
+                                //Console.WriteLine("Corrupt");
+                                corrupt = true;
+                                break;
+                            }
                         }
+                    }
+                    catch (IndexOutOfRangeException)
+                    {
+                        Console.WriteLine("Failed to find game end");
+                        corrupt = true;
                     }
 
                     if (parse && !corrupt)
@@ -226,6 +236,17 @@ namespace HandCruncher
                 throw new HistoryParserException("Mismatched seats and start balances");
             }
 
+            if (log.BoardCards.Count > 5)
+            {
+                throw new HistoryParserException("Too many board cards");
+            }
+
+            var actors = log.PreflopActions.Concat(log.FlopActions).Concat(log.TurnActions).Concat(log.RiverActions).Select(a => a.Name).Distinct();
+            if (!actors.All(log.Seats.ContainsKey) || !actors.All(log.StartBalances.ContainsKey))
+            {
+                throw new HistoryParserException("Action for unseated player");
+            }
+
             Dictionary<string, int> spends = new Dictionary<string, int>();
             foreach (var kv in log.Seats)
             {
@@ -240,6 +261,12 @@ namespace HandCruncher
             if (spends.Any(s => s.Value > log.StartBalances[s.Key]))
             {
                 throw new HistoryParserException("Spent more than start balance");
+            }
+
+            var cardList = log.BoardCards.Concat(log.KnownHoleCards.SelectMany(c => c.Value)).ToList();
+            if (cardList.Count != cardList.Distinct().Count())
+            {
+                throw new HistoryParserException("Duplicate cards");
             }
 
             return log;
