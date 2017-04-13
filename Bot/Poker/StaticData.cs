@@ -30,10 +30,10 @@ namespace Poker
 
             EvenWeights = evenWeights;
 
-            var averagePreflopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/preflop/average.json"));
+            var averagePreflopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/preflop/preflop_average.json"));
             AveragePreflopPredictionVector = averagePreflopPredictionVector;
 
-            var averageFlopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/flop/average.json"));
+            var averageFlopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/flop/flop_average.json"));
             AverageFlopPredictionVector = averageFlopPredictionVector;
 
             Dictionary<HandClass, IReadOnlyList<Card[]>> expansions = new Dictionary<HandClass, IReadOnlyList<Card[]>>();

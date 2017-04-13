@@ -132,7 +132,7 @@ namespace Poker
 
             foreach (var l in losses.OrderByDescending(kv => kv.Value).Take(10))
             {
-                Console.WriteLine("Lose to {0}", l.Key);
+                //Console.WriteLine("Lose to {0}", l.Key);
             }
 
             return (double)wins / sampleCount;

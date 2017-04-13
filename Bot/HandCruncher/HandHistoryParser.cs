@@ -60,7 +60,7 @@ namespace HandCruncher
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine("Failed to parse game: " + ex.ToString());
+                            Console.WriteLine(ex.Message);
                         }
 
                         if (log != null)

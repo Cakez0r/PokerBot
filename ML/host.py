@@ -1,8 +1,11 @@
+import os
 import falcon
 import json
 import pokerai_oo as pai
 from waitress import serve
  
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 class PokerResource:
     def __init__(self, feature_count, class_count, save_file, name):
         self.network = pai.PokerAi(feature_count, class_count, save_file, name)

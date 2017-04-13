@@ -70,7 +70,7 @@ namespace Poker
             int preflopNumActorsAfter = 0;
 
             var preflopActOrder = GetPreflopActOrder();
-            preflopNumActorsAfter = preflopActOrder.SkipWhile(s => s != id).Count();
+            preflopNumActorsAfter = preflopActOrder.SkipWhile(s => s != id).Skip(0).Count();
             foreach (var action in PreflopActions.TakeWhile(a => a.Name != id))
             {
                 preflopActsBefore++;
@@ -86,7 +86,7 @@ namespace Poker
 
             double[] preflopVector = new double[15]
             {
-                (double)preflopNumActorsAfter / (preflopActOrder.Count - 1),
+                (double)preflopNumActorsAfter / (preflopActOrder.Count -1),
                 preflopBet / BigBlind,
                 preflopBet / StartBalances[id],
                 preflopBet / (preflopPot - preflopBet),
@@ -113,7 +113,7 @@ namespace Poker
             int flopNumActorsAfter = 0;
 
             var flopActOrder = GetFlopActOrder();
-            flopNumActorsAfter = flopActOrder.SkipWhile(s => s != id).Count();
+            flopNumActorsAfter = flopActOrder.SkipWhile(s => s != id).Skip(0).Count();
             foreach (var action in FlopActions.TakeWhile(a => a.Name != id))
             {
                 flopActsBefore++;
@@ -131,7 +131,7 @@ namespace Poker
                 (double)flopNumActorsAfter / (flopActOrder.Count - 1),
                 flopBet / BigBlind,
                 flopBet / StartBalances[id],
-                flopBet / (flopPot - flopBet),
+                flopBet / Math.Max((flopPot - flopBet), 1),
                 flopBet / avgStack,
                 flopBetsBefore,
                 flopNumActorsAfter,

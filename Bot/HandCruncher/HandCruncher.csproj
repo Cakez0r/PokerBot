@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="BetInfo.cs" />
     <Compile Include="CardParser.cs" />
+    <Compile Include="FullTiltPokerHistoryParserRules.cs" />
     <Compile Include="HandHistoryParser.cs" />
     <Compile Include="HistoryParserException.cs" />
     <Compile Include="IHistoryParserRules.cs" />

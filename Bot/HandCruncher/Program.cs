@@ -19,11 +19,92 @@ namespace Poker
 
         private static void Main(string[] args)
         {
-            MakeTrainingData<PokerstarsHistoryParserRules>(@"D:\Poker data\PS");
-            MakeTrainingData<PartyPokerHistoryParserRules>(@"D:\Poker data\PTY");
+            CreateTrainingFiles(HandState.Preflop);
+            CreateTrainingFiles(HandState.Flop);
         }
 
-        private static void MakeTrainingData<T>(string folder) where T : IHistoryParserRules, new()
+        private static void CreateTrainingFiles(HandState state)
+        {
+            ConcurrentDictionary<HandClass, ConcurrentBag<Tuple<double[], string>>> data = new ConcurrentDictionary<HandClass, ConcurrentBag<Tuple<double[], string>>>();
+            MakeTrainingData<FullTiltPokerHistoryParserRules>(@"D:\Poker data\FTP", state, data);
+            MakeTrainingData<PokerstarsHistoryParserRules>(@"D:\Poker data\PS", state, data);
+            MakeTrainingData<PartyPokerHistoryParserRules>(@"D:\Poker data\PTY", state, data);
+
+            int minSamples = data.Min(kv => kv.Value.Count) * 5;// (data.Min(kv => kv.Value.Count) + data.Max(kv => kv.Value.Count)) / 2;
+            List<double[]> vectors = new List<double[]>(minSamples * data.Count);
+            List<string> labels = new List<string>(minSamples * data.Count);
+
+            foreach (var kv in data)
+            {
+                var bag = kv.Value.ToList();
+                int[] idxs = Shuffle(bag.Count);
+                for (int i = 0; i < minSamples; i++)
+                {
+                    int idx = idxs[i % idxs.Length];
+                    vectors.Add(bag[idx].Item1);
+                    labels.Add(bag[idx].Item2);
+                }
+            }
+
+            int[] shuffle = Shuffle(vectors.Count);
+            List<double[]> shuffledVectors = new List<double[]>(vectors.Count);
+            List<string> shuffledLabels = new List<string>(labels.Count);
+            for (int i = 0; i < shuffle.Length; i++)
+            {
+                shuffledVectors.Add(vectors[shuffle[i]]);
+                shuffledLabels.Add(labels[shuffle[i]]);
+            }
+
+            vectors = shuffledVectors;
+            labels = shuffledLabels;
+
+            double[] avg = new double[vectors.First().Length];
+            foreach (double[] v in vectors)
+            {
+                for (int i = 0; i < v.Length; i++)
+                {
+                    avg[i] += v[i];
+                }
+            }
+
+            for (int i = 0; i < avg.Length; i++)
+            {
+                avg[i] /= vectors.Count;
+            }
+
+            foreach (double[] v in vectors)
+            {
+                for (int i = 0; i < v.Length; i++)
+                {
+                    v[i] -= avg[i];
+                }
+            }
+
+            string stateString = state.ToString().ToLower();
+            File.WriteAllText(stateString + "_average.json", JsonConvert.SerializeObject(avg));
+            File.WriteAllLines(stateString + "_labels", labels);
+            File.WriteAllLines(stateString + "_data", vectors.Select(v => string.Join(" ", v)));
+            File.WriteAllLines(stateString + "_rep", data.OrderByDescending(kv => kv.Value.Count).Select(kv => kv.Key.ToString() + ": " + kv.Value.Count));
+        }
+
+        private static int[] Shuffle(int count)
+        {
+            int[] idxs = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                int j = GlobalRandom.Next(i + 1);
+                if (j != i)
+                {
+                    idxs[i] = idxs[j];
+                }
+
+                idxs[j] = i;
+            }
+
+            return idxs;
+        }
+
+        private static void MakeTrainingData<T>(string folder, HandState state, ConcurrentDictionary<HandClass, ConcurrentBag<Tuple<double[], string>>> data) where T : IHistoryParserRules, new()
         {
             Dictionary<HandClass, int> ordering = new Dictionary<HandClass, int>();
             List<HandClass> loadedHands = JsonConvert.DeserializeObject<List<HandClass>>(File.ReadAllText("../../../../datafiles/ordering.json"));
@@ -35,9 +116,6 @@ namespace Poker
             }
 
             int count = 0;
-            List<double[]> vectors = new List<double[]>();
-            List<string> labels = new List<string>();
-            HandState state = HandState.Preflop;
             Parallel.ForEach(GetFilesRecursive(folder), (fileName) =>
             //foreach (string fileName in GetFilesRecursive(folder))
             {
@@ -78,15 +156,19 @@ namespace Poker
                         foreach (var kvp in game.KnownHoleCards)
                         {
                             double[] vector = game.MakeVector(kvp.Key, state);
+                            if (vector.Any(d => double.IsNaN(d) || double.IsInfinity(d)))
+                            {
+                                throw new Exception("Bad vector value");
+                            }
 
                             HandClass cls = HandClass.FromCards(kvp.Value[0], kvp.Value[1]);
                             int bucket = ordering[cls];
                             string label = MakeLabel(bucket);
-                            lock (vectors)
+                            data.AddOrUpdate(cls, new ConcurrentBag<Tuple<double[], string>>(), (c, b) =>
                             {
-                                vectors.Add(vector);
-                                labels.Add(label);
-                            }
+                                b.Add(Tuple.Create(vector, label));
+                                return b;
+                            });
                         }
                     }
                     catch (Exception ex)
@@ -98,33 +180,6 @@ namespace Poker
                 Console.Title = count.ToString();
                 Console.WriteLine(fileName);
             });
-
-            double[] avg = new double[vectors.First().Length];
-            foreach (double[] v in vectors)
-            {
-                for (int i = 0; i < v.Length; i++)
-                {
-                    avg[i] += v[i];
-                }
-            }
-
-            for (int i = 0; i < avg.Length; i++)
-            {
-                avg[i] /= vectors.Count;
-            }
-
-            foreach (double[] v in vectors)
-            {
-                for (int i = 0; i < v.Length; i++)
-                {
-                    v[i] -= avg[i];
-                }
-            }
-
-            string stateString = state.ToString().ToLower();
-            File.WriteAllText(stateString + "_average.json", JsonConvert.SerializeObject(avg));
-            File.WriteAllLines(stateString + "_labels", labels);
-            File.WriteAllLines(stateString + "_data", vectors.Select(v => string.Join(" ", v)));
         }
 
         private static void GetHandRepresentations(string folder)

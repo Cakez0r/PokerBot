@@ -170,12 +170,13 @@ namespace Poker
 
                 if (ShowPredictions)
                 {
-                    for (int i = 0; i < 5; i++)
+                    for (int i = 0; i < 10; i++)
                     {
                         s_log.Debug("{0} might have {1} ({2})", player, data.Weights[i].Item1, data.Weights[i].Item2);
                     }
                     HandClass c = HandClass.FromCards(player.Hole[0], player.Hole[1]);
                     var actual = data.Weights.First(t => t.Item1.A == c.A && t.Item1.B == c.B && t.Item1.Suited == c.Suited);
+                    s_log.Debug("---");
                     s_log.Debug("{0} might have {1} ({2})", player, actual.Item1, actual.Item2);
                 }
             }
@@ -215,12 +216,13 @@ namespace Poker
 
                 if (ShowPredictions)
                 {
-                    for (int i = 0; i < 5; i++)
+                    for (int i = 0; i < 10; i++)
                     {
                         s_log.Debug("{0} might have {1} ({2})", player, data.Weights[i].Item1, data.Weights[i].Item2);
                     }
                     HandClass c = HandClass.FromCards(player.Hole[0], player.Hole[1]);
                     var actual = data.Weights.First(t => t.Item1.A == c.A && t.Item1.B == c.B && t.Item1.Suited == c.Suited);
+                    s_log.Debug("---");
                     s_log.Debug("{0} might have {1} ({2})", player, actual.Item1, actual.Item2);
                 }
             }

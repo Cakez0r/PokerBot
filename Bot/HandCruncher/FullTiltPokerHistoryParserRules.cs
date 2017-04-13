@@ -1,30 +1,30 @@
-﻿using System;
+﻿using Poker;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Poker;
 
 namespace HandCruncher
 {
-    public class PokerstarsHistoryParserRules : IHistoryParserRules
+    public class FullTiltPokerHistoryParserRules : IHistoryParserRules
     {
         private const string CURRENCY_MATCH = @"\$([0-9\.,]+)";
 
         private static RegexOptions sFlags = RegexOptions.Compiled;
 
-        private static Regex s_dealerSeatExpr = new Regex("#([0-9]) is the button$", sFlags);
+        private static Regex s_dealerSeatExpr = new Regex("The button is in seat #([0-9])$", sFlags);
 
-        private static Regex s_seatInfoExpr = new Regex(@"^Seat ([0-9]): ([^ ]+) \(" + CURRENCY_MATCH + @" in chips\)", sFlags);
+        private static Regex s_seatInfoExpr = new Regex(@"^Seat ([0-9]): ([^ ]+) \(" + CURRENCY_MATCH + @"\)$", sFlags);
 
-        private static Regex s_gameIdExpr = new Regex(@"^PokerStars Game #([^:]+)", sFlags);
+        private static Regex s_gameIdExpr = new Regex(@"^Full Tilt Poker Game #([^:]+)", sFlags);
 
-        private static Regex s_tableIdExpr = new Regex(@"Table '([^']+)'", sFlags);
+        private static Regex s_tableIdExpr = new Regex(@"^Full Tilt Poker Game #[^:]+: Table ([^ ]+)", sFlags);
 
-        private static Regex s_smallBlindPostExpr = new Regex(@"^([^:]+): posts small blind " + CURRENCY_MATCH, sFlags);
+        private static Regex s_smallBlindPostExpr = new Regex(@"^([^ ]+) posts the small blind of " + CURRENCY_MATCH, sFlags);
 
-        private static Regex s_bigBlindPostExpr = new Regex(@"^([^:]+): posts big blind " + CURRENCY_MATCH, sFlags);
+        private static Regex s_bigBlindPostExpr = new Regex(@"^([^ ]+) posts the big blind of " + CURRENCY_MATCH, sFlags);
 
         private static Regex s_flopStartExpr = new Regex(@"^\*\*\* FLOP \*\*\* \[([^\]]+)\]", sFlags);
 
@@ -32,17 +32,17 @@ namespace HandCruncher
 
         private static Regex s_riverStartExpr = new Regex(@"^\*\*\* RIVER \*\*\* \[[^\]]+\] \[([^\]]+)\]", sFlags);
 
-        private static Regex s_foldExpr = new Regex(@"^([^:]+): folds", sFlags);
+        private static Regex s_foldExpr = new Regex(@"^([^ ]+) folds", sFlags);
 
-        private static Regex s_raiseExpr = new Regex(@"^([^:]+): raises " + CURRENCY_MATCH + " to " + CURRENCY_MATCH, sFlags);
+        private static Regex s_raiseExpr = new Regex(@"^([^ ]+) raises to " + CURRENCY_MATCH, sFlags);
 
-        private static Regex s_callExpr = new Regex(@"^([^:]+): calls " + CURRENCY_MATCH, sFlags);
+        private static Regex s_callExpr = new Regex(@"^([^ ]+) calls " + CURRENCY_MATCH, sFlags);
 
-        private static Regex s_betExpr = new Regex(@"^([^:]+): bets " + CURRENCY_MATCH, sFlags);
+        private static Regex s_betExpr = new Regex(@"^([^ ]+) bets " + CURRENCY_MATCH, sFlags);
 
-        private static Regex s_checkExpr = new Regex(@"^([^:]+): checks", sFlags);
+        private static Regex s_checkExpr = new Regex(@"^([^ ]+) checks", sFlags);
 
-        private static Regex s_showsCardsExpr = new Regex(@"^([^:]+): shows \[([^\]]+)\]", sFlags);
+        private static Regex s_showsCardsExpr = new Regex(@"^([^ ]+) shows \[([^\]]+)\]", sFlags);
 
         private Dictionary<string, int> m_bets = new Dictionary<string, int>();
 
@@ -116,7 +116,7 @@ namespace HandCruncher
         {
             Match m = (Match)match.State;
             string name = m.Groups[1].Value;
-            decimal v = decimal.Parse(m.Groups[3].Value.Replace(",", ""));
+            decimal v = decimal.Parse(m.Groups[2].Value.Replace(",", ""));
             int a = (int)(v * 100);
             if (!m_bets.ContainsKey(name))
             {
@@ -178,7 +178,7 @@ namespace HandCruncher
 
         public bool IsGameStart(string line)
         {
-            return line.StartsWith("PokerStars Game #");
+            return line.StartsWith("Full Tilt Poker Game #");
         }
 
         public bool IsGameEnd(string line)
@@ -288,7 +288,7 @@ namespace HandCruncher
 
         public bool IsCorruptionIndicator(string line)
         {
-            bool corruptSeat = line.StartsWith("Seat") && line.TrimEnd(' ').EndsWith("chips)") && !s_seatInfoExpr.IsMatch(line);
+            bool corruptSeat = line.StartsWith("Seat") && line.TrimEnd(' ').EndsWith(")") && !s_seatInfoExpr.IsMatch(line);
             bool corruptButton = line.StartsWith("Table") && !s_dealerSeatExpr.IsMatch(line);
 
             return corruptButton || corruptSeat;

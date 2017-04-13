@@ -59,13 +59,17 @@ namespace Poker
                 List<IPlayer> players = new List<IPlayer>()
                 {
                     new ConsoleInteractivePlayer(amount) { Name = "Lewis" },
+                    new ConsoleInteractivePlayer(amount) { Name = "Bob" },
+                    new ConsoleInteractivePlayer(amount) { Name = "Dave" },
+                    new ConsoleInteractivePlayer(amount) { Name = "Edward" },
+                    new ConsoleInteractivePlayer(amount) { Name = "Fred" },
 
                     alice,
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Bob" },
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Charlie" },
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Dave" },
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Edward" },
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Fred" },
+                    //new AiPlayer(simulator,predictor, staticData) { Name = "Bob" },
+                    //new AiPlayer(simulator,predictor, staticData) { Name = "Charlie" },
+                    //new AiPlayer(simulator,predictor, staticData) { Name = "Dave" },
+                    //new AiPlayer(simulator,predictor, staticData) { Name = "Edward" },
+                    //new AiPlayer(simulator,predictor, staticData) { Name = "Fred" },
 
                     //new AlwaysCallPlayer(amount) { Name = "Bob" },
                     //new AlwaysCallPlayer(amount) { Name = "Charlie" },
