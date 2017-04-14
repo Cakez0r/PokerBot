@@ -88,7 +88,6 @@
     <Compile Include="IStaticData.cs" />
     <Compile Include="LutEvaluator.cs" />
     <Compile Include="MockEvaluator.cs" />
-    <Compile Include="MockSimulator.cs" />
     <Compile Include="NamedGameAction.cs" />
     <Compile Include="NeuralNetHandPredictor.cs" />
     <Compile Include="AiPlayer.cs" />

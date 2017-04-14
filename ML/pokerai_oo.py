@@ -11,7 +11,7 @@ class PokerAi:
                 self.feature_count = feature_count
                 self.class_count = class_count
 
-                self.hidden_1_count = round((feature_count + class_count) * 0.5)
+                self.hidden_1_count = round((feature_count + class_count) * 0.8)
                 self.hidden_2_count = self.hidden_1_count
 
                 self.input_layer = tf.placeholder(tf.float32, [None, feature_count], 'input')

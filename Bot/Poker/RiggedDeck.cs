@@ -31,6 +31,10 @@ namespace Poker
             s_allCards = allCards;
         }
 
+        private RiggedDeck()
+        {
+        }
+
         public RiggedDeck(IReadOnlyList<Card> dealFirst)
         {
             ulong bm = Card.MakeHandBitmap(dealFirst);
@@ -70,6 +74,15 @@ namespace Poker
                 trueCount++;
                 idx = idx % m_cards.Length;
             }
+        }
+
+        public IDeck Clone()
+        {
+            return new RiggedDeck()
+            {
+                m_cards = (Card[])m_cards.Clone(),
+                m_ptr = m_ptr
+            };
         }
 
         public Card Deal()

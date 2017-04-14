@@ -19,8 +19,60 @@ namespace Poker
 
         private static void Main(string[] args)
         {
-            CreateTrainingFiles(HandState.Preflop);
-            CreateTrainingFiles(HandState.Flop);
+            double[] ramp = BankrollSimulator(1500);
+            File.WriteAllText("ramp.json", JsonConvert.SerializeObject(ramp));
+            //CreateTrainingFiles(HandState.Preflop);
+            //CreateTrainingFiles(HandState.Flop);
+            //CreateTrainingFiles(HandState.Turn);
+            //CreateTrainingFiles(HandState.River);
+        }
+
+        private static double[] BankrollSimulator(double bankroll)
+        {
+            const int NUM_GAMES = 25_000_000;
+            double[] betRamp = new double[101];
+            Parallel.For(1, 101, (i) =>
+            {
+                int threshold = 100 - i;
+                for (int ramp = 0; ramp < 500; ramp++)
+                {
+                    double balance = bankroll;
+                    double betSize = bankroll * ((double)(500 - ramp) / 1000);
+                    for (int j = 0; j < NUM_GAMES; j++)
+                    {
+                        int res = GlobalRandom.Next(100);
+                        if (res >= threshold)
+                        {
+                            double odds = (double)threshold / i;
+                            odds = Math.Min(odds, 10);
+                            balance += betSize;// + (betSize * odds);
+                        }
+                        else
+                        {
+                            balance -= betSize;
+                        }
+
+                        if (balance <= 0)
+                        {
+                            break;
+                        }
+
+                        if (balance > bankroll * 1.2)
+                        {
+                            balance = bankroll * 1.2;
+                        }
+                    }
+
+                    if (balance > bankroll)
+                    {
+                        Console.WriteLine("At {0}% risk, max bet is {1}", i, betSize);
+                        betRamp[i] = betSize / 2.0;
+                        break;
+                    }
+                }
+            });
+
+            return betRamp;
         }
 
         private static void CreateTrainingFiles(HandState state)
@@ -148,6 +200,42 @@ namespace Poker
                             }
 
                             if (game.FlopActions.Select(kv => kv.Name).Distinct().Count() == 1)
+                            {
+                                continue;
+                            }
+                        }
+
+                        if (state == HandState.Turn)
+                        {
+                            if (game.BoardCards.Count < 4)
+                            {
+                                continue;
+                            }
+
+                            if (game.TurnActions.Count == 0)
+                            {
+                                continue;
+                            }
+
+                            if (game.TurnActions.Select(kv => kv.Name).Distinct().Count() == 1)
+                            {
+                                continue;
+                            }
+                        }
+
+                        if (state == HandState.River)
+                        {
+                            if (game.BoardCards.Count < 5)
+                            {
+                                continue;
+                            }
+
+                            if (game.RiverActions.Count == 0)
+                            {
+                                continue;
+                            }
+
+                            if (game.RiverActions.Select(kv => kv.Name).Distinct().Count() == 1)
                             {
                                 continue;
                             }

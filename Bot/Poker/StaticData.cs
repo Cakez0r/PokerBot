@@ -7,15 +7,15 @@ namespace Poker
 {
     public class StaticData : IStaticData
     {
-        public IReadOnlyList<double> AveragePreflopPredictionVector { get; private set; }
-
-        public IReadOnlyList<double> AverageFlopPredictionVector { get; private set; }
+        public IReadOnlyDictionary<HandState, IReadOnlyList<double>> AveragePredictionVectors { get; private set; }
 
         public IReadOnlyList<Tuple<HandClass, double>> EvenWeights { get; private set; }
 
         public IReadOnlyList<HandClass> AllPossibleHands { get; private set; }
 
         public IReadOnlyDictionary<HandClass, IReadOnlyList<Card[]>> HandClassExpansions { get; private set; }
+
+        public IReadOnlyList<double> BetRamp { get; private set; }
 
         public StaticData(string dataPath)
         {
@@ -30,11 +30,20 @@ namespace Poker
 
             EvenWeights = evenWeights;
 
+            var averagePredictionVectors = new Dictionary<HandState, IReadOnlyList<double>>();
             var averagePreflopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/preflop/preflop_average.json"));
-            AveragePreflopPredictionVector = averagePreflopPredictionVector;
+            averagePredictionVectors[HandState.Preflop] = averagePreflopPredictionVector;
 
             var averageFlopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/flop/flop_average.json"));
-            AverageFlopPredictionVector = averageFlopPredictionVector;
+            averagePredictionVectors[HandState.Flop] = averageFlopPredictionVector;
+
+            var averageTurnPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/turn/turn_average.json"));
+            averagePredictionVectors[HandState.Turn] = averageTurnPredictionVector;
+
+            var averageRiverPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/river/river_average.json"));
+            averagePredictionVectors[HandState.River] = averageRiverPredictionVector;
+
+            AveragePredictionVectors = averagePredictionVectors;
 
             Dictionary<HandClass, IReadOnlyList<Card[]>> expansions = new Dictionary<HandClass, IReadOnlyList<Card[]>>();
             foreach (var cls in AllPossibleHands)
@@ -42,6 +51,9 @@ namespace Poker
                 expansions.Add(cls, cls.Expand());
             }
             HandClassExpansions = expansions;
+
+            double[] betRamp = JsonConvert.DeserializeObject<double[]>(File.ReadAllText(dataPath + "/ramp.json"));
+            BetRamp = betRamp;
         }
     }
 }

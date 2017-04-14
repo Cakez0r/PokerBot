@@ -25,15 +25,15 @@ def get_batch(data, batch_index, batch_size, slice_start, slice_end):
   return batch
 
 def main(_):
-  state = 'flop'
+  state = 'river'
 
   data = load_file(state + '_data')
   labels = load_file(state + '_labels')
 
   batch_size = 1000
   batches_per_epoch = len(data) / batch_size
-  num_epochs = 100
-  rate_decay = batches_per_epoch * 25
+  num_epochs = 60
+  rate_decay = batches_per_epoch * 20
   iterations = batches_per_epoch * num_epochs
   update_interval = 1000
   test_set = 100000

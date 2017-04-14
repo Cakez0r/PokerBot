@@ -63,6 +63,50 @@ namespace Poker
             return actOrder;
         }
 
+        public IList<string> GetTurnActOrder()
+        {
+            List<string> actOrder = new List<string>();
+            var orderedSeats = Seats.OrderBy(kv => kv.Value).ToList();
+            int n = 0;
+            foreach (var seat in orderedSeats.Concat(orderedSeats).Concat(orderedSeats).SkipWhile(kv => kv.Value < DealerSeat).Skip(1))
+            {
+                if (!PreflopActions.Concat(FlopActions).Any(a => a.Name == seat.Key && a.Type == GameActionType.Fold))
+                {
+                    actOrder.Add(seat.Key);
+                }
+
+                n++;
+                if (n == Seats.Count)
+                {
+                    break;
+                }
+            }
+
+            return actOrder;
+        }
+
+        public IList<string> GetRiverActOrder()
+        {
+            List<string> actOrder = new List<string>();
+            var orderedSeats = Seats.OrderBy(kv => kv.Value).ToList();
+            int n = 0;
+            foreach (var seat in orderedSeats.Concat(orderedSeats).Concat(orderedSeats).SkipWhile(kv => kv.Value < DealerSeat).Skip(1))
+            {
+                if (!PreflopActions.Concat(FlopActions).Concat(TurnActions).Any(a => a.Name == seat.Key && a.Type == GameActionType.Fold))
+                {
+                    actOrder.Add(seat.Key);
+                }
+
+                n++;
+                if (n == Seats.Count)
+                {
+                    break;
+                }
+            }
+
+            return actOrder;
+        }
+
         public double[] MakeVector(string id, HandState state)
         {
             int preflopBetsBefore = 0;
@@ -70,7 +114,7 @@ namespace Poker
             int preflopNumActorsAfter = 0;
 
             var preflopActOrder = GetPreflopActOrder();
-            preflopNumActorsAfter = preflopActOrder.SkipWhile(s => s != id).Skip(0).Count();
+            preflopNumActorsAfter = preflopActOrder.SkipWhile(s => s != id).Skip(1).Count();
             foreach (var action in PreflopActions.TakeWhile(a => a.Name != id))
             {
                 preflopActsBefore++;
@@ -113,7 +157,7 @@ namespace Poker
             int flopNumActorsAfter = 0;
 
             var flopActOrder = GetFlopActOrder();
-            flopNumActorsAfter = flopActOrder.SkipWhile(s => s != id).Skip(0).Count();
+            flopNumActorsAfter = flopActOrder.SkipWhile(s => s != id).Skip(1).Count();
             foreach (var action in FlopActions.TakeWhile(a => a.Name != id))
             {
                 flopActsBefore++;
@@ -157,11 +201,127 @@ namespace Poker
                 BoardCards.Take(3).GroupBy(c => c.Suit).Max(g => g.Count())
             };
 
-            double[] combinedVector = new double[preflopVector.Length + flopVector.Length];
-            Buffer.BlockCopy(preflopVector, 0, combinedVector, 0, preflopVector.Length * sizeof(double));
-            Buffer.BlockCopy(flopVector, 0, combinedVector, preflopVector.Length * sizeof(double), flopVector.Length * sizeof(double));
+            double[] combinedFlopVector = new double[preflopVector.Length + flopVector.Length];
+            Buffer.BlockCopy(preflopVector, 0, combinedFlopVector, 0, preflopVector.Length * sizeof(double));
+            Buffer.BlockCopy(flopVector, 0, combinedFlopVector, preflopVector.Length * sizeof(double), flopVector.Length * sizeof(double));
 
-            return combinedVector;
+            if (state == HandState.Flop)
+            {
+                return combinedFlopVector;
+            }
+
+            int turnBetsBefore = 0;
+            int turnActsBefore = 0;
+            int turnNumActorsAfter = 0;
+
+            var turnActOrder = GetTurnActOrder();
+            turnNumActorsAfter = turnActOrder.SkipWhile(s => s != id).Skip(1).Count();
+            foreach (var action in TurnActions.TakeWhile(a => a.Name != id))
+            {
+                turnActsBefore++;
+                if (action.Type == GameActionType.Bet)
+                {
+                    turnBetsBefore++;
+                }
+            }
+
+            double turnBet = (double)TurnActions.Where(a => a.Name == id).Sum(a => a.Amount);
+            double turnPot = (double)TurnActions.Sum(a => a.Amount);
+
+            double[] turnVector = new double[26]
+            {
+                (double)turnNumActorsAfter / (turnActOrder.Count - 1),
+                turnBet / BigBlind,
+                turnBet / StartBalances[id],
+                turnBet / Math.Max((turnPot - turnBet), 1),
+                turnBet / avgStack,
+                turnBetsBefore,
+                turnNumActorsAfter,
+                TurnActions.Count(a => a.Name == id),
+                TurnActions.Count(a => a.Name == id && a.Type == GameActionType.Check),
+                TurnActions.Count(a => a.Name == id && a.Type == GameActionType.Bet && !a.IsRaise),
+                TurnActions.Count(a => a.Name == id && a.Type == GameActionType.Bet && a.IsRaise),
+                (turnPot - turnBet) / BigBlind,
+
+                BoardCards.Take(4).Count(c => c.Face == Face.Two),
+                BoardCards.Take(4).Count(c => c.Face == Face.Three),
+                BoardCards.Take(4).Count(c => c.Face == Face.Four),
+                BoardCards.Take(4).Count(c => c.Face == Face.Five),
+                BoardCards.Take(4).Count(c => c.Face == Face.Six),
+                BoardCards.Take(4).Count(c => c.Face == Face.Seven),
+                BoardCards.Take(4).Count(c => c.Face == Face.Eight),
+                BoardCards.Take(4).Count(c => c.Face == Face.Nine),
+                BoardCards.Take(4).Count(c => c.Face == Face.Ten),
+                BoardCards.Take(4).Count(c => c.Face == Face.Jack),
+                BoardCards.Take(4).Count(c => c.Face == Face.Queen),
+                BoardCards.Take(4).Count(c => c.Face == Face.King),
+                BoardCards.Take(4).Count(c => c.Face == Face.Ace),
+                BoardCards.Take(4).GroupBy(c => c.Suit).Max(g => g.Count())
+            };
+
+            double[] combinedTurnVector = new double[combinedFlopVector.Length + turnVector.Length];
+            Buffer.BlockCopy(combinedFlopVector, 0, combinedTurnVector, 0, combinedFlopVector.Length * sizeof(double));
+            Buffer.BlockCopy(turnVector, 0, combinedTurnVector, combinedFlopVector.Length * sizeof(double), turnVector.Length * sizeof(double));
+
+            if (state == HandState.Turn)
+            {
+                return combinedTurnVector;
+            }
+
+            int riverBetsBefore = 0;
+            int riverActsBefore = 0;
+            int riverNumActorsAfter = 0;
+
+            var riverActOrder = GetRiverActOrder();
+            riverNumActorsAfter = riverActOrder.SkipWhile(s => s != id).Skip(1).Count();
+            foreach (var action in RiverActions.TakeWhile(a => a.Name != id))
+            {
+                riverActsBefore++;
+                if (action.Type == GameActionType.Bet)
+                {
+                    riverBetsBefore++;
+                }
+            }
+
+            double riverBet = (double)RiverActions.Where(a => a.Name == id).Sum(a => a.Amount);
+            double riverPot = (double)RiverActions.Sum(a => a.Amount);
+
+            double[] riverVector = new double[26]
+            {
+                (double)riverNumActorsAfter / (riverActOrder.Count - 1),
+                riverBet / BigBlind,
+                riverBet / StartBalances[id],
+                riverBet / Math.Max((riverPot - riverBet), 1),
+                riverBet / avgStack,
+                riverBetsBefore,
+                riverNumActorsAfter,
+                RiverActions.Count(a => a.Name == id),
+                RiverActions.Count(a => a.Name == id && a.Type == GameActionType.Check),
+                RiverActions.Count(a => a.Name == id && a.Type == GameActionType.Bet && !a.IsRaise),
+                RiverActions.Count(a => a.Name == id && a.Type == GameActionType.Bet && a.IsRaise),
+                (riverPot - riverBet) / BigBlind,
+
+                BoardCards.Count(c => c.Face == Face.Two),
+                BoardCards.Count(c => c.Face == Face.Three),
+                BoardCards.Count(c => c.Face == Face.Four),
+                BoardCards.Count(c => c.Face == Face.Five),
+                BoardCards.Count(c => c.Face == Face.Six),
+                BoardCards.Count(c => c.Face == Face.Seven),
+                BoardCards.Count(c => c.Face == Face.Eight),
+                BoardCards.Count(c => c.Face == Face.Nine),
+                BoardCards.Count(c => c.Face == Face.Ten),
+                BoardCards.Count(c => c.Face == Face.Jack),
+                BoardCards.Count(c => c.Face == Face.Queen),
+                BoardCards.Count(c => c.Face == Face.King),
+                BoardCards.Count(c => c.Face == Face.Ace),
+                BoardCards.GroupBy(c => c.Suit).Max(g => g.Count())
+            };
+
+            double[] combinedRiverVector = new double[combinedTurnVector.Length + riverVector.Length];
+            Buffer.BlockCopy(combinedTurnVector, 0, combinedRiverVector, 0, combinedTurnVector.Length * sizeof(double));
+            Buffer.BlockCopy(riverVector, 0, combinedRiverVector, combinedTurnVector.Length * sizeof(double), riverVector.Length * sizeof(double));
+
+            return combinedRiverVector;
         }
     }
 }

@@ -9,5 +9,7 @@ namespace Poker
     public interface IDeck
     {
         Card Deal();
+
+        IDeck Clone();
     }
 }

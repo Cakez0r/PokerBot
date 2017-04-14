@@ -42,6 +42,15 @@ namespace Poker
             }
         }
 
+        public IDeck Clone()
+        {
+            return new Deck()
+            {
+                m_cards = (Card[])m_cards.Clone(),
+                m_ptr = m_ptr
+            };
+        }
+
         public Card Deal()
         {
             int idx = Interlocked.Increment(ref m_ptr);

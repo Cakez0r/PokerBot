@@ -19,6 +19,8 @@ namespace Poker
 
         public GameStateLog Log { get; private set; } = new GameStateLog();
 
+        public IDeck Deck { get; private set; }
+
         public int NumberOfPlayersInHand
         {
             get => Players.Count - m_folded.Count;
@@ -37,8 +39,6 @@ namespace Poker
             get => m_pots.Sum(p => p.Total);
         }
 
-        private Deck m_deck = new Deck();
-
         private ISet<IPlayer> m_folded = new HashSet<IPlayer>();
 
         private ISet<IPlayer> m_allIn = new HashSet<IPlayer>();
@@ -52,6 +52,7 @@ namespace Poker
         public Game(IHandEvaluator evaluator)
         {
             m_evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
+            Deck = new Deck();
         }
 
         public void Initialise(int smallBlind, int bigBlind, int dealer, IReadOnlyList<IPlayer> players)
@@ -159,7 +160,7 @@ namespace Poker
                 {
                     IPlayer player = Players[GetPlayerAfterButton(p + 1)];
 
-                    Card[] cards = new Card[2] { m_deck.Deal(), m_deck.Deal() };
+                    Card[] cards = new Card[2] { Deck.Deal(), Deck.Deal() };
                     player.Hole = cards;
                 }
             }
@@ -284,7 +285,7 @@ namespace Poker
                     bool isRaise = false;
                     int amountToCall = highestBet - contribution;
 
-                    s_log.Info("{0} to act (balance {1})", playerToAct, playerToAct.Balance);
+                    s_log.Info("{0} to act (balance {1}) (pot {2})", playerToAct, playerToAct.Balance, PotSize);
                     var act = playerToAct.Act(this, contribution, amountToCall, minRaise);
 
                     if (act.Type == GameActionType.Check)
@@ -453,7 +454,20 @@ namespace Poker
 
         private bool IsNoMoreAction()
         {
-            return Players.Count - Players.Count(p => m_folded.Contains(p) || m_allIn.Contains(p)) <= 1;
+            if (Players.Count - m_folded.Count <= 1)
+            {
+                return true;
+            }
+
+            var remaining = Players.Where(p => !(m_folded.Contains(p) || m_allIn.Contains(p)));
+
+            if (remaining.Count() == 1)
+            {
+                var p = remaining.First();
+                return m_allIn.Contains(p) || (ActivePot.Contributions.ContainsKey(p) && ActivePot.Contributions[p] == ActivePot.Contributions.Values.Max());
+            }
+
+            return remaining.Count() <= 1;
         }
 
         public void Step()
@@ -483,9 +497,9 @@ namespace Poker
                 case HandState.Flop:
                     s_log.Info("----------");
                     s_log.Info("Flop");
-                    Board.Add(m_deck.Deal());
-                    Board.Add(m_deck.Deal());
-                    Board.Add(m_deck.Deal());
+                    Board.Add(Deck.Deal());
+                    Board.Add(Deck.Deal());
+                    Board.Add(Deck.Deal());
                     for (int i = 0; i < 3; i++)
                     {
                         Log.BoardCards.Add(Board[i]);
@@ -506,7 +520,7 @@ namespace Poker
                 case HandState.Turn:
                     s_log.Info("----------");
                     s_log.Info("Turn");
-                    Board.Add(m_deck.Deal());
+                    Board.Add(Deck.Deal());
                     Log.BoardCards.Add(Board[3]);
                     s_log.Info("Board is {0} {1} {2} {3}", Board[0], Board[1], Board[2], Board[3]);
                     DoOrbit();
@@ -524,7 +538,7 @@ namespace Poker
                 case HandState.River:
                     s_log.Info("----------");
                     s_log.Info("River");
-                    Board.Add(m_deck.Deal());
+                    Board.Add(Deck.Deal());
                     Log.BoardCards.Add(Board[4]);
                     s_log.Info("Board is {0} {1} {2} {3} {4}", Board[0], Board[1], Board[2], Board[3], Board[4]);
                     DoOrbit();

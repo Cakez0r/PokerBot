@@ -137,5 +137,52 @@ namespace Poker
 
             return (double)wins / sampleCount;
         }
+
+        public double SimulateActual(Card a, Card b, IReadOnlyList<Card[]> opponents, IReadOnlyList<Card> board, int sampleCount)
+        {
+            int wins = 0;
+            Card[] hand = new Card[] { a, b };
+
+            Parallel.For(0, sampleCount, (n) =>
+            {
+                Card[] newBoard = new Card[5];
+                for (int i = 0; i < board.Count; i++)
+                {
+                    newBoard[i] = board[i];
+                }
+
+                List<Card> riggedCards = hand.Concat(board).Concat(opponents.SelectMany(c => c)).ToList();
+                IDeck deck = new RiggedDeck(riggedCards);
+                for (int i = 0; i < riggedCards.Count; i++)
+                {
+                    deck.Deal();
+                }
+
+                for (int i = 0; i < 5 - board.Count; i++)
+                {
+                    newBoard[4 - i] = deck.Deal();
+                }
+
+                var myScore = m_evaluator.EvaluateScore(newBoard.Concat(hand));
+
+                bool lost = false;
+                for (int i = 0; i < opponents.Count; i++)
+                {
+                    var opponentScore = m_evaluator.EvaluateScore(newBoard.Concat(opponents[i]));
+                    if (opponentScore > myScore)
+                    {
+                        lost = true;
+                        break;
+                    }
+                }
+
+                if (!lost)
+                {
+                    Interlocked.Increment(ref wins);
+                }
+            });
+
+            return (double)wins / sampleCount;
+        }
     }
 }
