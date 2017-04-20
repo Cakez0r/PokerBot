@@ -1,0 +1,4 @@
+Use expected hand strength squared to value hands that have potential to make very strong hands (http://www.ai.rug.nl/~mwiering/Tom_van_der_Kleij_Thesis.pdf 5.4.3)
+
+Incorporate ties into winrate (wins + (ties/2)) / (wins+losses+ties)
+
