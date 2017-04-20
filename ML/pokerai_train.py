@@ -2,11 +2,17 @@ import sys
 import tensorflow as tf
 import numpy as np
 import datetime as dt
+import os
 
 def load_file(filename):
+  if os.path.isfile(filename + '.npy'):
+    return np.load(filename + '.npy')
+  
   with open(filename) as f:
     lines = f.readlines()
-    return [np.fromstring(s, sep=' ') for s in lines]
+    ary = [np.fromstring(s, sep=' ') for s in lines]
+    np.save(filename + '.npy', ary)
+    return ary
 
 def load_file_slice(filename, slice):
   with open(filename) as f:
@@ -24,64 +30,46 @@ def get_batch(data, batch_index, batch_size, slice_start, slice_end):
     batch.append(data[idx])
   return batch
 
-def main(_):
-  state = 'river'
+def main(args):
+  datafile = args[0]
+  labelfile = args[1]
+  outfolder = args[2]
+  network_name = args[3]
 
-  data = load_file(state + '_data')
-  labels = load_file(state + '_labels')
+  data = load_file(datafile)
+  labels = load_file(labelfile)
 
   batch_size = 1000
-  batches_per_epoch = len(data) / batch_size
-  num_epochs = 60
+  test_set = 100000
+  batches_per_epoch = (len(data) - test_set) / batch_size
+  num_epochs = 80
   rate_decay = batches_per_epoch * 20
   iterations = batches_per_epoch * num_epochs
   update_interval = 1000
-  test_set = 100000
   highest_accuracy = 0
   start_time = dt.datetime.now()
 
   FEATURE_COUNT = len(data[0])
   CLASS_COUNT = len(labels[0])
-  HIDDEN_1_COUNT = round((FEATURE_COUNT + CLASS_COUNT) * 0.8)
-  HIDDEN_2_COUNT = HIDDEN_1_COUNT
+  HIDDEN_COUNT = round((FEATURE_COUNT + CLASS_COUNT) * 0.8)
 
-  with tf.variable_scope(state):
+  with tf.variable_scope(network_name):
     keep_prob = tf.placeholder(tf.float32)
     input_layer = tf.placeholder(tf.float32, [None, FEATURE_COUNT], 'input')
 
-    weights_1 = tf.Variable(tf.zeros([FEATURE_COUNT, HIDDEN_1_COUNT])) # tf.get_variable('weights_1', shape=[FEATURE_COUNT, HIDDEN_1_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([FEATURE_COUNT, HIDDEN_COUNT]))
-    biases_1 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_1_COUNT]))
+    weights_1 = tf.get_variable('weights_1', shape=[FEATURE_COUNT, HIDDEN_COUNT], initializer=tf.contrib.layers.xavier_initializer())
+    biases_1 = tf.get_variable('biases_1', shape=[HIDDEN_COUNT], initializer=tf.contrib.layers.xavier_initializer())
     hidden_layer_1 = tf.nn.relu(tf.matmul(input_layer, weights_1) + biases_1)
     hidden_layer_1_drop = tf.nn.dropout(hidden_layer_1, keep_prob)
 
-    weights_2 = tf.Variable(tf.zeros([HIDDEN_1_COUNT, CLASS_COUNT])) # tf.get_variable('weights_2', shape=[HIDDEN_1_COUNT, CLASS_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
-    biases_2 = tf.Variable(tf.constant(0.1, shape=[CLASS_COUNT]))
-    #hidden_layer_2 = tf.nn.relu(tf.matmul(hidden_layer_1_drop, weights_2) + biases_2)
-    #hidden_layer_2_drop = tf.nn.dropout(hidden_layer_2, keep_prob)
+    weights_2 = tf.get_variable('weights_2', shape=[HIDDEN_COUNT, HIDDEN_COUNT], initializer=tf.contrib.layers.xavier_initializer())
+    biases_2 = tf.get_variable('biases_2', shape=[HIDDEN_COUNT], initializer=tf.contrib.layers.xavier_initializer())
+    hidden_layer_2 = tf.nn.relu(tf.matmul(hidden_layer_1_drop, weights_2) + biases_2)
+    hidden_layer_2_drop = tf.nn.dropout(hidden_layer_2, keep_prob)
 
-    #weights_3 = tf.get_variable('weights_3', shape=[HIDDEN_2_COUNT, HIDDEN_2_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
-    #biases_3 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_2_COUNT]))
-    #hidden_layer_3 = tf.nn.relu(tf.matmul(hidden_layer_2_drop, weights_3) + biases_3)
-    #hidden_layer_3_drop = tf.nn.dropout(hidden_layer_3, keep_prob)
-
-    #weights_4 = tf.get_variable('weights_4', shape=[HIDDEN_2_COUNT, HIDDEN_2_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
-    #biases_4 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_2_COUNT]))
-    #hidden_layer_4 = tf.nn.relu(tf.matmul(hidden_layer_3_drop, weights_4) + biases_4)
-    #hidden_layer_4_drop = tf.nn.dropout(hidden_layer_4, keep_prob)
-
-    #weights_5 = tf.get_variable('weights_5', shape=[HIDDEN_2_COUNT, HIDDEN_2_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
-    #biases_5 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_2_COUNT]))
-    #hidden_layer_5 = tf.nn.relu(tf.matmul(hidden_layer_4_drop, weights_5) + biases_5)
-    #hidden_layer_5_drop = tf.nn.dropout(hidden_layer_5, keep_prob)
-
-    #weights_6 = tf.get_variable('weights_6', shape=[HIDDEN_2_COUNT, HIDDEN_2_COUNT], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
-    #biases_6 = tf.Variable(tf.constant(0.1, shape=[HIDDEN_2_COUNT]))
-    #hidden_layer_6 = tf.nn.relu(tf.matmul(hidden_layer_5_drop, weights_6) + biases_6)
-    #hidden_layer_6_drop = tf.nn.dropout(hidden_layer_6, keep_prob)
-
-    #weights_7 = tf.get_variable('weights_7', shape=[HIDDEN_2_COUNT, CLASS_COUNT], initializer=tf.contrib.layers.xavier_initializer())
-    #biases_7 = tf.Variable(tf.constant(0.1, shape=[CLASS_COUNT]))
-    output_layer = tf.matmul(hidden_layer_1_drop, weights_2) + biases_2
+    weights_3 = tf.get_variable('weights_3', shape=[HIDDEN_COUNT, CLASS_COUNT], initializer=tf.contrib.layers.xavier_initializer())
+    biases_3 = tf.get_variable('biases_3', shape=[CLASS_COUNT], initializer=tf.contrib.layers.xavier_initializer())
+    output_layer = tf.matmul(hidden_layer_2_drop, weights_3) + biases_3
 
     softmax_output = tf.nn.softmax(output_layer)
 
@@ -100,7 +88,7 @@ def main(_):
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
     for i in range(round(iterations)):
-      session.run(train_step, { input_layer: get_batch(data, i, batch_size, 0, len(data) - test_set), output_actual: get_batch(labels, i, batch_size, 0, len(data) - test_set), keep_prob: 0.8 })
+      session.run(train_step, { input_layer: get_batch(data, i, batch_size, 0, len(data) - test_set), output_actual: get_batch(labels, i, batch_size, 0, len(data) - test_set), keep_prob: 0.5 })
       if i % update_interval == 1:
         delta = dt.datetime.now() - start_time
         delta = delta / i
@@ -110,15 +98,20 @@ def main(_):
         unknown_accuracy = unknown_accuracy * 100
         # print('Known accuracy: ' + str(session.run(accuracy, { input_layer: get_batch(data, 0, 10000, 0, len(data)), output_actual: get_batch(labels, 0, 10000, 0, len(data)), keep_prob: 1.0 })))
 
-        if unknown_accuracy > highest_accuracy:
-          print('Saving new high...')
-          saver.save(session, './' + state)
-          highest_accuracy = unknown_accuracy
+        #if unknown_accuracy > highest_accuracy and i > batches_per_epoch * 20:
+        #  print('Saving new high...')
+        #  saver.save(session, state + '/' + state)
+        #  highest_accuracy = unknown_accuracy
 
         print('[' + str(progress) + '%] Accuracy: ' + str(unknown_accuracy) + '%  -  Best: ' + str(highest_accuracy) + '%  -  Time remaining: ' + str(finishes_in))
 
+    saver.save(session, outfolder + '/network')
     print('Finished')
-    print('Best Accuracy: ' + str(highest_accuracy))
+    print('Accuracy: ' + str(unknown_accuracy))
+
+    f = open(outfolder + '/accuracy', 'w')
+    f.write(str(highest_accuracy))
+    f.flush()
 
 if __name__ == '__main__':
   main(sys.argv[1:])

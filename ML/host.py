@@ -19,12 +19,12 @@ POSTFLOP_FEATURES = 26
 
 api = falcon.API()
 print('load preflop')
-api.add_route('/preflop', PokerResource(PREFLOP_FEATURES, 169, '../datafiles/preflop/preflop', 'preflop'))
+api.add_route('/preflop', PokerResource(PREFLOP_FEATURES, 169, '../datafiles/preflop/network', 'preflop'))
 print('load flop')
-api.add_route('/flop', PokerResource(PREFLOP_FEATURES + POSTFLOP_FEATURES, 169, '../datafiles/flop/flop', 'flop'))
+api.add_route('/flop', PokerResource(PREFLOP_FEATURES + POSTFLOP_FEATURES, 169, '../datafiles/flop/network', 'flop'))
 print('load turn')
-api.add_route('/turn', PokerResource(PREFLOP_FEATURES + (POSTFLOP_FEATURES*2), 169, '../datafiles/turn/turn', 'turn'))
+api.add_route('/turn', PokerResource(PREFLOP_FEATURES + (POSTFLOP_FEATURES*2), 169, '../datafiles/turn/network', 'turn'))
 print('load river')
-api.add_route('/river', PokerResource(PREFLOP_FEATURES + (POSTFLOP_FEATURES*3), 169, '../datafiles/river/river', 'river'))
+api.add_route('/river', PokerResource(PREFLOP_FEATURES + (POSTFLOP_FEATURES*3), 169, '../datafiles/river/network', 'river'))
 
 serve(api, host='127.0.0.1', port=25012)

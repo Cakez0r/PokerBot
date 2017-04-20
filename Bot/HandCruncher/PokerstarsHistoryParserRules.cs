@@ -14,11 +14,11 @@ namespace HandCruncher
 
         private static RegexOptions sFlags = RegexOptions.Compiled;
 
-        private static Regex s_dealerSeatExpr = new Regex("#([0-9]) is the button$", sFlags);
+        private static Regex s_dealerSeatExpr = new Regex("#([0-9]+) is the button$", sFlags);
 
-        private static Regex s_seatInfoExpr = new Regex(@"^Seat ([0-9]): ([^ ]+) \(" + CURRENCY_MATCH + @" in chips\)", sFlags);
+        private static Regex s_seatInfoExpr = new Regex(@"^Seat ([0-9]+): ([^ ]+) \(" + CURRENCY_MATCH + @" in chips\)", sFlags);
 
-        private static Regex s_gameIdExpr = new Regex(@"^PokerStars Game #([^:]+)", sFlags);
+        private static Regex s_gameIdExpr = new Regex(@"^PokerStars Game|Hand #([^:]+)", sFlags);
 
         private static Regex s_tableIdExpr = new Regex(@"Table '([^']+)'", sFlags);
 
@@ -178,7 +178,7 @@ namespace HandCruncher
 
         public bool IsGameStart(string line)
         {
-            return line.StartsWith("PokerStars Game #");
+            return line.StartsWith("PokerStars Hand #") || line.StartsWith("PokerStars Game #");
         }
 
         public bool IsGameEnd(string line)

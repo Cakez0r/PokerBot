@@ -162,6 +162,8 @@ namespace Poker
 
                     Card[] cards = new Card[2] { Deck.Deal(), Deck.Deal() };
                     player.Hole = cards;
+
+                    Log.KnownHoleCards[player.ToString()] = cards;
                 }
             }
         }
@@ -285,7 +287,7 @@ namespace Poker
                     bool isRaise = false;
                     int amountToCall = highestBet - contribution;
 
-                    s_log.Info("{0} to act (balance {1}) (pot {2})", playerToAct, playerToAct.Balance, PotSize);
+                    s_log.Info("{0} to act (balance {1}) (pot {2}) ({3} to call)", playerToAct, playerToAct.Balance, PotSize, amountToCall);
                     var act = playerToAct.Act(this, contribution, amountToCall, minRaise);
 
                     if (act.Type == GameActionType.Check)

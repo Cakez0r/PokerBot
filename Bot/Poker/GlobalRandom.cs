@@ -1,4 +1,5 @@
 ﻿using MathNet.Numerics.Random;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,8 @@ namespace Poker
 {
     public static class GlobalRandom
     {
+        private static Logger s_log = LogManager.GetCurrentClassLogger();
+
         private static ThreadLocal<Xorshift> s_random = new ThreadLocal<Xorshift>(() => new Xorshift(false));
 
         public static int Next()
@@ -48,7 +51,9 @@ namespace Poker
                 rnd -= item.Item2;
             }
 
-            return weightedItems.Last().Item1;
+            s_log.Warn("Weighted random failed");
+
+            return weightedItems.First().Item1;
         }
     }
 }

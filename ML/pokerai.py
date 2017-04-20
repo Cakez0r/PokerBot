@@ -9,7 +9,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 FEATURE_COUNT = 15
 CLASS_COUNT = 169
 
-HIDDEN_1_COUNT = round((FEATURE_COUNT + CLASS_COUNT) * 0.66)
+HIDDEN_1_COUNT = round((FEATURE_COUNT + CLASS_COUNT) * 0.75)
 HIDDEN_2_COUNT = HIDDEN_1_COUNT
 
 input_layer = tf.placeholder(tf.float32, [None, FEATURE_COUNT], 'input')

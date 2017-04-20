@@ -60,7 +60,7 @@ namespace Poker
                 {
                     for (int i = 0; i < dealFirst.Count; i++)
                     {
-                        if (Card.ToIndex(m_cards[idx]) == Card.ToIndex(dealFirst[i]))
+                        if (m_cards[idx] == dealFirst[i])
                         {
                             m_cards[idx] = m_cards[i];
                             m_cards[i] = dealFirst[i];

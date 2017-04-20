@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 namespace Poker
 {
-    public class Simulator : ISimulator
+    public class MonteCarloSimulator : ISimulator
     {
         private IHandEvaluator m_evaluator;
         private IStaticData m_staticData;
 
-        public Simulator(IHandEvaluator evaluator, IStaticData staticData)
+        public bool UseRandomOffset { get; set; } = true;
+
+        public MonteCarloSimulator(IHandEvaluator evaluator, IStaticData staticData)
         {
             m_evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
             m_staticData = staticData ?? throw new ArgumentNullException(nameof(staticData));
@@ -35,7 +37,7 @@ namespace Poker
             int ofs = GlobalRandom.Next(expansions.Count);
             for (int i = 0; i < expansions.Count; i++)
             {
-                var idx = i % expansions.Count;
+                var idx = (i + ofs) % expansions.Count;
                 var hand = expansions[idx];
                 var bm = Card.MakeHandBitmap(hand);
                 if ((bm & usedCards) == 0)
@@ -75,7 +77,7 @@ namespace Poker
                 }
 
                 List<Card[]> oppponents = new List<Card[]>(opponentWeights.Count);
-                int randomOffset = GlobalRandom.Next();
+                int randomOffset = UseRandomOffset ? GlobalRandom.Next() : 0;
                 for (int i = 0; i < opponentWeights.Count; i++)
                 {
                     var oh = SelectRandomHand(opponentWeights[(i + randomOffset) % opponentWeights.Count], usedCards);

@@ -8,33 +8,33 @@ using System.Threading.Tasks;
 
 namespace HandCruncher
 {
-    public class FullTiltPokerHistoryParserRules : IHistoryParserRules
+    public class OngameHistoryParserRules : IHistoryParserRules
     {
         private const string CURRENCY_MATCH = @"\$([0-9\.,]+)";
 
         private static RegexOptions sFlags = RegexOptions.Compiled;
 
-        private static Regex s_dealerSeatExpr = new Regex("The button is in seat #([0-9]+)$", sFlags);
+        private static Regex s_dealerSeatExpr = new Regex(@"^Button: seat ([0-9]+)$", sFlags);
 
-        private static Regex s_seatInfoExpr = new Regex(@"^Seat ([0-9]+): ([^ ]+) \(" + CURRENCY_MATCH + @"\)$", sFlags);
+        private static Regex s_seatInfoExpr = new Regex(@"^Seat ([0-9]+): ([^ ]+) \(" + CURRENCY_MATCH + @"\) $", sFlags);
 
-        private static Regex s_gameIdExpr = new Regex(@"^Full Tilt Poker Game #([^:]+)", sFlags);
+        private static Regex s_gameIdExpr = new Regex(@"^\*\*\*\*\* History for hand ([^ ]+) \*\*\*\*\*$", sFlags);
 
-        private static Regex s_tableIdExpr = new Regex(@"^Full Tilt Poker Game #[^:]+: Table ([^ ]+)", sFlags);
+        private static Regex s_tableIdExpr = new Regex(@"^Table: ([^ ]+)", sFlags);
 
-        private static Regex s_smallBlindPostExpr = new Regex(@"^([^ ]+) posts the small blind of " + CURRENCY_MATCH, sFlags);
+        private static Regex s_smallBlindPostExpr = new Regex(@"^([^ ]+) posts small blind \(" + CURRENCY_MATCH, sFlags);
 
-        private static Regex s_bigBlindPostExpr = new Regex(@"^([^ ]+) posts the big blind of " + CURRENCY_MATCH, sFlags);
+        private static Regex s_bigBlindPostExpr = new Regex(@"^([^ ]+) posts big blind \(" + CURRENCY_MATCH, sFlags);
 
-        private static Regex s_flopStartExpr = new Regex(@"^\*\*\* FLOP \*\*\* \[([^\]]+)\]", sFlags);
+        private static Regex s_flopStartExpr = new Regex(@"^--- Dealing flop \[([^\]]+)\]$", sFlags);
 
-        private static Regex s_turnStartExpr = new Regex(@"^\*\*\* TURN \*\*\* \[[^\]]+\] \[([^\]]+)\]", sFlags);
+        private static Regex s_turnStartExpr = new Regex(@"--- Dealing turn \[([^\]]+)\]", sFlags);
 
-        private static Regex s_riverStartExpr = new Regex(@"^\*\*\* RIVER \*\*\* \[[^\]]+\] \[([^\]]+)\]", sFlags);
+        private static Regex s_riverStartExpr = new Regex(@"--- Dealing river \[([^\]]+)\]", sFlags);
 
-        private static Regex s_foldExpr = new Regex(@"^([^ ]+) folds", sFlags);
+        private static Regex s_foldExpr = new Regex(@"^([^ ]+) folds$", sFlags);
 
-        private static Regex s_raiseExpr = new Regex(@"^([^ ]+) raises to " + CURRENCY_MATCH, sFlags);
+        private static Regex s_raiseExpr = new Regex(@"^([^ ]+) raises " + CURRENCY_MATCH + " to " + CURRENCY_MATCH, sFlags);
 
         private static Regex s_callExpr = new Regex(@"^([^ ]+) calls " + CURRENCY_MATCH, sFlags);
 
@@ -42,7 +42,7 @@ namespace HandCruncher
 
         private static Regex s_checkExpr = new Regex(@"^([^ ]+) checks", sFlags);
 
-        private static Regex s_showsCardsExpr = new Regex(@"^([^ ]+) shows \[([^\]]+)\]", sFlags);
+        private static Regex s_showsCardsExpr = new Regex(@"Seat [0-9]+: ([^ ]+) [^\[]+\[([^\]]+)\]$", sFlags);
 
         private Dictionary<string, int> m_bets = new Dictionary<string, int>();
 
@@ -63,7 +63,13 @@ namespace HandCruncher
 
         public BetInfo GetBet(ParserCheckInfo match)
         {
-            return ExtractBetInfo(match);
+            var betInfo = ExtractBetInfo(match);
+            if (m_bets.ContainsKey(betInfo.Name))
+            {
+                //Handle stupid all-in edge case
+                betInfo.Amount -= m_bets[betInfo.Name] - betInfo.Amount;
+            }
+            return betInfo;
         }
 
         public BetInfo GetBigBlindPost(ParserCheckInfo match)
@@ -114,20 +120,7 @@ namespace HandCruncher
 
         public BetInfo GetRaise(ParserCheckInfo match)
         {
-            Match m = (Match)match.State;
-            string name = m.Groups[1].Value;
-            decimal v = decimal.Parse(m.Groups[2].Value.Replace(",", ""));
-            int a = (int)(v * 100);
-            if (!m_bets.ContainsKey(name))
-            {
-                m_bets[name] = 0;
-            }
-            int bet = m_bets[name];
-
-            var amt = a - bet;
-            m_bets[name] += amt;
-
-            return new BetInfo(name, amt);
+            return ExtractBetInfo(match);
         }
 
         public Card GetRiverCard(ParserCheckInfo match)
@@ -178,12 +171,12 @@ namespace HandCruncher
 
         public bool IsGameStart(string line)
         {
-            return line.StartsWith("Full Tilt Poker Game #");
+            return line.StartsWith("***** History for hand");
         }
 
         public bool IsGameEnd(string line)
         {
-            return line.StartsWith("*** SUM");
+            return line.StartsWith("***** End of hand");
         }
 
         public ParserCheckInfo IsDealerSeat(string line)
@@ -224,7 +217,7 @@ namespace HandCruncher
 
         public bool IsPreflopStart(string line)
         {
-            return line.StartsWith("*** HOLE CARDS");
+            return line == "Dealing pocket cards";
         }
 
         public ParserCheckInfo IsFlopStart(string line)
@@ -289,9 +282,8 @@ namespace HandCruncher
         public bool IsCorruptionIndicator(string line)
         {
             bool corruptSeat = line.StartsWith("Seat") && line.TrimEnd(' ').EndsWith(")") && !s_seatInfoExpr.IsMatch(line);
-            bool corruptButton = line.StartsWith("Table") && !s_dealerSeatExpr.IsMatch(line);
 
-            return corruptButton || corruptSeat;
+            return corruptSeat;
         }
     }
 }

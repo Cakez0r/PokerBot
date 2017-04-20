@@ -64,7 +64,9 @@
   <ItemGroup>
     <Compile Include="BasicAiPlayer.cs" />
     <Compile Include="AlwaysCallPlayer.cs" />
+    <Compile Include="BlendedPredictor.cs" />
     <Compile Include="Card.cs" />
+    <Compile Include="CheatingHandPredictor.cs" />
     <Compile Include="ConsoleInteractivePlayer.cs" />
     <Compile Include="Deck.cs" />
     <Compile Include="Face.cs" />
@@ -95,9 +97,10 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RiggedDeck.cs" />
-    <Compile Include="Simulator.cs" />
+    <Compile Include="MonteCarloSimulator.cs" />
     <Compile Include="StaticData.cs" />
     <Compile Include="Suit.cs" />
+    <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

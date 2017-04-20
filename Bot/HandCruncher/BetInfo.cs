@@ -9,7 +9,7 @@ namespace HandCruncher
     public class BetInfo
     {
         public string Name { get; private set; }
-        public int Amount { get; private set; }
+        public int Amount { get; set; }
 
         public BetInfo(string name, int amount)
         {

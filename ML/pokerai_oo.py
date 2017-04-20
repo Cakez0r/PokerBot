@@ -21,12 +21,13 @@ class PokerAi:
                 self.hidden_layer_1 = tf.nn.relu(tf.matmul(self.input_layer, self.weights_1) + self.biases_1)
                 self.hidden_layer_1_drop = tf.nn.dropout(self.hidden_layer_1, 1)
 
-                self.weights_2 = tf.Variable(tf.zeros([self.hidden_1_count, self.class_count]))
-                self.biases_2 = tf.Variable(tf.constant(0.1, shape=[self.class_count]))
-                #self.hidden_layer_2 = tf.nn.relu(tf.matmul(self.hidden_layer_1, self.weights_2) + self.biases_2)
+                self.weights_2 = tf.Variable(tf.zeros([self.hidden_1_count, self.hidden_1_count]))
+                self.biases_2 = tf.Variable(tf.constant(0.1, shape=[self.hidden_1_count]))
+                self.hidden_layer_2 = tf.nn.relu(tf.matmul(self.hidden_layer_1, self.weights_2) + self.biases_2)
+                self.hidden_layer_2_drop = tf.nn.dropout(self.hidden_layer_2, 1)
 
-                #self.weights_3 = tf.get_variable('weights_3', shape=[self.hidden_2_count, self.hidden_2_count], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
-                #self.biases_3 = tf.Variable(tf.constant(0.1, shape=[self.hidden_2_count]))
+                self.weights_3 = tf.Variable(tf.zeros([self.hidden_1_count, self.class_count]))
+                self.biases_3 = tf.Variable(tf.constant(0.1, shape=[self.class_count]))
                 #self.hidden_layer_3 = tf.nn.relu(tf.matmul(self.hidden_layer_2, self.weights_3) + self.biases_3)
 
                 #self.weights_4 = tf.get_variable('weights_4', shape=[self.hidden_2_count, self.hidden_2_count], initializer=tf.contrib.layers.xavier_initializer()) # tf.Variable(tf.zeros([HIDDEN_COUNT, CLASS_COUNT]))
@@ -35,7 +36,7 @@ class PokerAi:
 
                 #self.weights_5 = tf.get_variable('weights_5', shape=[self.hidden_2_count, self.class_count], initializer=tf.contrib.layers.xavier_initializer())
                 #self.biases_5 = tf.Variable(tf.constant(0.1, shape=[self.class_count]))
-                self.output_layer = tf.matmul(self.hidden_layer_1_drop, self.weights_2) + self.biases_2
+                self.output_layer = tf.matmul(self.hidden_layer_2_drop, self.weights_3) + self.biases_3
 
                 self.softmax_output = tf.nn.softmax(self.output_layer)
 

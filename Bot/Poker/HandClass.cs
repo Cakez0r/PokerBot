@@ -160,8 +160,6 @@ namespace Poker
                 sb.Append(A.ToString()[0]);
             }
 
-            sb.Append(" ");
-
             if ((int)B < 10)
             {
                 sb.Append(((int)B).ToString());
@@ -171,11 +169,29 @@ namespace Poker
                 sb.Append(B.ToString()[0]);
             }
 
-            sb.Append(" ");
-
-            sb.Append(Suited ? "Suited" : "Off-suit");
+            sb.Append(Suited ? "S" : "O");
 
             return sb.ToString();
+        }
+
+        public static bool operator ==(HandClass a, HandClass b)
+        {
+            if (ReferenceEquals(a, b))
+            {
+                return true;
+            }
+
+            if (((object)a == null) || ((object)b == null))
+            {
+                return false;
+            }
+
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(HandClass a, HandClass b)
+        {
+            return !(a == b);
         }
     }
 }

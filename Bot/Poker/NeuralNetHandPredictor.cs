@@ -16,33 +16,17 @@ namespace Poker
             m_staticData = staticData ?? throw new ArgumentNullException(nameof(staticData));
         }
 
-        public IReadOnlyList<Tuple<HandClass, double>> Estimate(HandState state, IReadOnlyList<double> predictionVector)
+        public IReadOnlyList<Tuple<HandClass, double>> Predict(Game game, IPlayer player)
         {
-            //StringBuilder args = new StringBuilder();
-            //args.Append("pokerai_run.py ");
-            //foreach (var d in predictionVector)
-            //{
-            //    args.Append(d.ToString());
-            //    args.Append(' ');
-            //}
+            var vector = game.Log.MakeVector(player.ToString(), game.State);
+            IReadOnlyList<double> avg = m_staticData.AveragePredictionVectors[game.State];
+            for (int i = 0; i < vector.Length; i++)
+            {
+                vector[i] -= avg[i];
+            }
 
-            //var info = new ProcessStartInfo("python")
-            //{
-            //    Arguments = args.ToString(),
-            //    RedirectStandardOutput = true,
-            //    UseShellExecute = false,
-            //    StandardOutputEncoding = Encoding.ASCII
-            //};
-            //Process p = new Process();
-            //p.StartInfo = info;
-            //p.Start();
-
-            //p.WaitForExit();
-
-            //string result = p.StandardOutput.ReadToEnd();
-
-            var request = new RestRequest(state.ToString().ToLower(), Method.POST);
-            request.AddJsonBody(predictionVector);
+            var request = new RestRequest(game.State.ToString().ToLower(), Method.POST);
+            request.AddJsonBody(vector);
             var response = m_rc.Post(request);
             double[] probabilities = JsonConvert.DeserializeObject<double[]>(response.Content);
 

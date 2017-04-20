@@ -23,7 +23,7 @@ namespace Poker
                 for (int s = 0; s < 4; s++)
                 {
                     var c = new Card((Suit)s, (Face)f);
-                    var idx = c.GetHashCode();
+                    var idx = ToIndex(c);
                     cards[idx] = c;
                     bitmaps[1ul << i] = cards[i];
                     i++;
@@ -99,7 +99,7 @@ namespace Poker
 
         public bool Equals(Card x, Card y)
         {
-            return ToIndex(x) == ToIndex(y);
+            return x.Face == y.Face && x.Suit == y.Suit;
         }
 
         public override bool Equals(object obj)
@@ -144,6 +144,26 @@ namespace Poker
         public override int GetHashCode()
         {
             return ToIndex(this);
+        }
+
+        public static bool operator ==(Card a, Card b)
+        {
+            if (ReferenceEquals(a, b))
+            {
+                return true;
+            }
+
+            if (((object)a == null) || ((object)b == null))
+            {
+                return false;
+            }
+
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(Card a, Card b)
+        {
+            return !(a == b);
         }
     }
 }

@@ -31,16 +31,16 @@ namespace Poker
             EvenWeights = evenWeights;
 
             var averagePredictionVectors = new Dictionary<HandState, IReadOnlyList<double>>();
-            var averagePreflopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/preflop/preflop_average.json"));
+            var averagePreflopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/preflop/average.json"));
             averagePredictionVectors[HandState.Preflop] = averagePreflopPredictionVector;
 
-            var averageFlopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/flop/flop_average.json"));
+            var averageFlopPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/flop/average.json"));
             averagePredictionVectors[HandState.Flop] = averageFlopPredictionVector;
 
-            var averageTurnPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/turn/turn_average.json"));
+            var averageTurnPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/turn/average.json"));
             averagePredictionVectors[HandState.Turn] = averageTurnPredictionVector;
 
-            var averageRiverPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/river/river_average.json"));
+            var averageRiverPredictionVector = JsonConvert.DeserializeObject<IReadOnlyList<double>>(File.ReadAllText(dataPath + "/river/average.json"));
             averagePredictionVectors[HandState.River] = averageRiverPredictionVector;
 
             AveragePredictionVectors = averagePredictionVectors;

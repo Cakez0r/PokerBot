@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace Poker
 {
@@ -25,7 +26,7 @@ namespace Poker
 
         public double WeightAmplify { get; set; } = 1.0;
 
-        public int SimulationCount { get; set; } = 200_000;
+        public int SimulationCount { get; set; } = 500;
 
         private IHandPredictor m_predictor;
 
@@ -34,6 +35,28 @@ namespace Poker
         private ISimulator m_simulator;
 
         private Dictionary<IPlayer, PlayerData> m_data = new Dictionary<IPlayer, PlayerData>();
+
+        private HashSet<HandClass> m_preflopRaisers = new HashSet<HandClass>()
+        {
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.Ace)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.King), new Card(Suit.Diamonds, Face.King)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Queen), new Card(Suit.Diamonds, Face.Queen)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Jack), new Card(Suit.Diamonds, Face.Jack)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Ten), new Card(Suit.Diamonds, Face.Ten)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Nine), new Card(Suit.Diamonds, Face.Nine)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Eight), new Card(Suit.Diamonds, Face.Eight)),
+
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Clubs, Face.King)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Clubs, Face.Queen)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Clubs, Face.Jack)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Clubs, Face.Ten)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.King), new Card(Suit.Clubs, Face.Queen)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.King), new Card(Suit.Clubs, Face.Jack)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Queen), new Card(Suit.Clubs, Face.Jack)),
+
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.King)),
+            HandClass.FromCards(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.Queen)),
+        };
 
         private Game m_currentHand = null;
 
@@ -56,15 +79,14 @@ namespace Poker
             var opponentHandWeightings = new List<IReadOnlyList<Tuple<HandClass, double>>>();
             foreach (var player in game.Players)
             {
-                IReadOnlyList<Tuple<HandClass, double>> weights = null;
                 if (m_data.ContainsKey(player))
                 {
-                    weights = m_data[player].Weights;
+                    opponentHandWeightings.Add(m_data[player].Weights);
                 }
             }
 
             int numOpponentsLeft = game.NumberOfPlayersInHand - opponentHandWeightings.Count - 1;
-            int maxCallers = Math.Min(numOpponentsLeft + opponentHandWeightings.Count, 3);
+            int maxCallers = Math.Min(numOpponentsLeft + opponentHandWeightings.Count, 4);
             maxCallers -= opponentHandWeightings.Count;
             for (int i = 0; i < maxCallers; i++)
             {
@@ -88,13 +110,16 @@ namespace Poker
                 }
             }
             double actualWinRate = m_simulator.SimulateActual(Hole[0], Hole[1], opponents, game.Board.Select(c => c).ToList(), SimulationCount);
-            s_log.Info("{0} has {1} {2} (Predicted win rate: {3}) (Actual win rate: {4})", Name, Hole[0], Hole[1], predictedWinRate, actualWinRate);
 
-            //if (game.State != HandState.Preflop)
-            //{
-            //    string txt = string.Format("{0} has {1} {2} (Predicted win rate: {3}) (Actual win rate: {4})", Name, Hole[0], Hole[1], predictedWinRate, actualWinRate);
-            //    System.IO.File.AppendAllText("guesses.txt", txt + Environment.NewLine);
-            //}
+            string log = string.Format("{0} has {1} {2} (Predicted win rate: {3}%) (Actual win rate: {4}%)", Name, Hole[0], Hole[1], Utility.DoubleToPct(predictedWinRate), Utility.DoubleToPct(actualWinRate));
+            if (Math.Abs(predictedWinRate - actualWinRate) < 0.2)
+            {
+                s_log.Info(log);
+            }
+            else
+            {
+                s_log.Warn(log);
+            }
 
             if (predictedWinRate < potOdds)
             {
@@ -103,32 +128,38 @@ namespace Poker
 
             double maxValue = GetMaxValue(game.BigBlind, predictedWinRate);
             int raiseAmount = 0;
-            if (game.PotSize < maxValue && contribution <= game.BigBlind)
+            if (predictedWinRate > (1.0 / game.NumberOfPlayersInHand) && contribution <= game.BigBlind)
             {
-                if (game.State == HandState.Preflop)
+                if (GlobalRandom.Next() > .5)
                 {
-                    raiseAmount = (2 * game.BigBlind) + (game.BigBlind * game.GetBettersBefore(this));
-                }
-                else
-                {
-                    raiseAmount = (int)(game.PotSize * 0.75);
-                }
-
-                if (raiseAmount < minRaise)
-                {
-                    raiseAmount = minRaise;
+                    if (game.State == HandState.Preflop)
+                    {
+                        if ((m_preflopRaisers.Contains(ct) || GlobalRandom.Next() > .5) && amountToCall < game.BigBlind * 2)
+                        {
+                            raiseAmount = (2 * game.BigBlind) + (game.BigBlind * game.GetBettersBefore(this));
+                        }
+                    }
+                    else
+                    {
+                        raiseAmount = (int)(game.PotSize * 0.75);
+                    }
                 }
             }
 
-            if (game.PotSize + amountToCall + raiseAmount > maxValue)
+            if (raiseAmount > 0 && raiseAmount < minRaise)
             {
-                raiseAmount = 0;
+                raiseAmount = minRaise;
             }
 
-            if (raiseAmount < minRaise)
-            {
-                raiseAmount = 0;
-            }
+            //if (game.PotSize + amountToCall + raiseAmount > maxValue)
+            //{
+            //    raiseAmount = 0;
+            //}
+
+            //if (raiseAmount < minRaise)
+            //{
+            //    raiseAmount = 0;
+            //}
 
             int amount = amountToCall + raiseAmount;
 
@@ -175,24 +206,7 @@ namespace Poker
             }
 
             var data = m_data[player];
-
-            double[] vector = game.Log.MakeVector(player.ToString(), game.State);
-            IReadOnlyList<double> average = m_staticData.AveragePredictionVectors[game.State];
-            data.Vector = vector;
-            for (int i = 0; i < vector.Length; i++)
-            {
-                vector[i] -= average[i];
-            }
-            data.Weights = m_predictor.Estimate(game.State, vector);
-            //double amp = data.Weights.First().Item2 / (100.0 / 169);
-            //amp = Math.Max(amp, 1);
-            //List<Tuple<HandClass, double>> amplifiedWeights = new List<Tuple<HandClass, double>>(169);
-            //foreach (var w in data.Weights)
-            //{
-            //    amplifiedWeights.Add(Tuple.Create(w.Item1, w.Item2 * amp));
-            //}
-            //data.Weights = amplifiedWeights;
-
+            data.Weights = m_predictor.Predict(game, player);
             PrintPredictions(player, data);
         }
 
@@ -215,21 +229,40 @@ namespace Poker
         {
             if (ShowPredictions)
             {
-                for (int i = 0; i < 5; i++)
-                {
-                    s_log.Debug("{0} might have {1} ({2})", player, data.Weights[i].Item1, data.Weights[i].Item2);
-                }
+                StringBuilder range = new StringBuilder();
+                var poss = data.Weights.Where(w => w.Item2 > 1e-3);
+                range.Append("Range ");
+                range.Append(poss.Count());
+                range.Append(" [");
+
                 HandClass c = HandClass.FromCards(player.Hole[0], player.Hole[1]);
-                var actual = data.Weights.First(t => t.Item1.A == c.A && t.Item1.B == c.B && t.Item1.Suited == c.Suited);
-                s_log.Debug("---");
-                double randomChance = 1.0 / 169;
-                double diff = actual.Item2 / randomChance;
-                s_log.Debug("{0} has {1} ({2}) ({3} times more likely than random)", player, actual.Item1, actual.Item2, diff);
-                s_log.Debug("---");
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < data.Weights.Count; i++)
                 {
-                    s_log.Debug("{0} might not have {1} ({2})", player, data.Weights[data.Weights.Count - i - 1].Item1, data.Weights[data.Weights.Count - i - 1].Item2);
+                    var w = data.Weights[i];
+                    if (w.Item2 < 1e-3)
+                    {
+                        break;
+                    }
+
+                    if (w.Item1 == c)
+                    {
+                        range.Append("*");
+                    }
+                    range.Append(w.Item1.ToString());
+                    range.Append(" ");
+                    range.Append(Utility.DoubleToPct(w.Item2));
+                    range.Append("%");
+
+                    if (w.Item1 == c)
+                    {
+                        range.Append("*");
+                    }
+
+                    range.Append(", ");
                 }
+                range.Remove(range.Length - 2, 2);
+                range.Append("]");
+                s_log.Debug(range.ToString());
             }
         }
     }

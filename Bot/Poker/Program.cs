@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,9 +30,16 @@ namespace Poker
             evaluator = new LutEvaluator(evaluator, dataPath);
             //evaluator = new MockEvaluator();
             IStaticData staticData = new StaticData(dataPath);
-            ISimulator simulator = new Simulator(evaluator, staticData);
-            IHandPredictor predictor = new NeuralNetHandPredictor(staticData);
+            ISimulator simulator = new MonteCarloSimulator(evaluator, staticData) { UseRandomOffset = false };
+            IHandPredictor cheatingPredictor = new CheatingHandPredictor(staticData);
+            IHandPredictor neuralNetPredictor = new NeuralNetHandPredictor(staticData);
 
+            //Console.WriteLine(simulator.Simulate(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.Ace), new Card[0], new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights }, 10));
+            //Console.WriteLine(simulator.Simulate(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.Ace), new Card[0], new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights }, 100));
+            //Console.WriteLine(simulator.Simulate(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.Ace), new Card[0], new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights }, 1000));
+            //Console.WriteLine(simulator.Simulate(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.Ace), new Card[0], new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights }, 10000));
+            //Console.WriteLine(simulator.Simulate(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.Ace), new Card[0], new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights }, 100000));
+            //Console.WriteLine(simulator.Simulate(new Card(Suit.Clubs, Face.Ace), new Card(Suit.Diamonds, Face.Ace), new Card[0], new List<IReadOnlyList<Tuple<HandClass, double>>>() { staticData.EvenWeights }, 1000000));
             //Dictionary<HandClass, double> winRates = new Dictionary<HandClass, double>();
             //var board = new Card[0];
             //foreach (var h in staticData.AllPossibleHands)
@@ -52,25 +60,46 @@ namespace Poker
                 LogManager.Configuration.Reload();
             }
 
+            Dictionary<HandClass, int> ordering = new Dictionary<HandClass, int>();
+            int n = 0;
+            foreach (var o in staticData.AllPossibleHands)
+            {
+                ordering[o] = n;
+                n++;
+            }
+
             const double amp = 1;
+            List<BlendedPredictor> predictors = new List<BlendedPredictor>(9);
+            for (int i = 0; i < 9; i++)
+            {
+                predictors.Add(new BlendedPredictor(neuralNetPredictor, cheatingPredictor));
+            }
+            int hand = 0;
             while (true)
             {
                 int amount = 200;
-                var alice = new AiPlayer(simulator, predictor, staticData) { Name = "Alice", WeightAmplify = amp };
+                var alice = new AiPlayer(simulator, predictors[0], staticData) { Name = "Alice", WeightAmplify = amp };
                 List<IPlayer> players = new List<IPlayer>()
                 {
                     //new ConsoleInteractivePlayer(amount) { Name = "Lewis" },
                     //new ConsoleInteractivePlayer(amount) { Name = "Bob" },
+                    //new ConsoleInteractivePlayer(amount) { Name = "Charlie" },
                     //new ConsoleInteractivePlayer(amount) { Name = "Dave" },
                     //new ConsoleInteractivePlayer(amount) { Name = "Edward" },
                     //new ConsoleInteractivePlayer(amount) { Name = "Fred" },
+                    //new ConsoleInteractivePlayer(amount) { Name = "Gina" },
+                    //new ConsoleInteractivePlayer(amount) { Name = "Harry" },
+                    //new ConsoleInteractivePlayer(amount) { Name = "Ian" },
 
                     alice,
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Bob", WeightAmplify = amp },
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Charlie", WeightAmplify = amp },
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Dave", WeightAmplify = amp },
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Edward", WeightAmplify = amp },
-                    new AiPlayer(simulator,predictor, staticData) { Name = "Fred", WeightAmplify = amp },
+                    new AiPlayer(simulator, predictors[1], staticData) { Name = "Bob" },
+                    new AiPlayer(simulator, predictors[2], staticData) { Name = "Charlie" },
+                    new AiPlayer(simulator, predictors[3], staticData) { Name = "Dave" },
+                    new AiPlayer(simulator, predictors[4], staticData) { Name = "Edward" },
+                    new AiPlayer(simulator, predictors[5], staticData) { Name = "Fred" },
+                    new AiPlayer(simulator, predictors[6], staticData) { Name = "Gina" },
+                    new AiPlayer(simulator, predictors[7], staticData) { Name = "Harry" },
+                    new AiPlayer(simulator, predictors[8], staticData) { Name = "Ian" },
 
                     //new AlwaysCallPlayer(amount) { Name = "Bob" },
                     //new AlwaysCallPlayer(amount) { Name = "Charlie" },
@@ -79,17 +108,16 @@ namespace Poker
                     //new AlwaysCallPlayer(amount) { Name = "Fred" },
                 };
 
-                foreach (var player in players)
+                for (int i = 0; i < players.Count; i++)
                 {
-                    player.Balance = amount;
+                    players[i].Balance = amount;
+                    predictors[i].BlendFactor = interactive ? 0 : GlobalRandom.NextDouble() * .5;
                 }
                 alice.ShowPredictions = true;
-                //alice.RaiseThreshold = 0.4;
 
-                PrintStatus(players);
+                //PrintStatus(players);
 
                 int d = GlobalRandom.Next(int.MaxValue);
-                int hand = 0;
                 bool go = true;
                 while (go)
                 {
@@ -116,25 +144,60 @@ namespace Poker
                             }
                             s_log.Info("{0} is bankrupt", players[i]);
                             players.RemoveAt(i);
-                            PrintStatus(players);
+                            //PrintStatus(players);
+                        }
+                    }
+
+                    if (!interactive)
+                    {
+                        foreach (var h in g.Log.KnownHoleCards)
+                        {
+                            HandClass hc = HandClass.FromCards(h.Value[0], h.Value[1]);
+                            string label = MakeLabel(ordering[hc]) + Environment.NewLine;
+
+                            if (g.Log.PreflopActions.Any(a => a.Type != GameActionType.Fold && a.Name == h.Key))
+                            {
+                                var vec = string.Join(" ", g.Log.MakeVector(h.Key, HandState.Preflop)) + Environment.NewLine;
+                                File.AppendAllText("preflop_labels", label);
+                                File.AppendAllText("preflop_data", vec);
+                            }
+
+                            if (g.Log.FlopActions.Any(a => a.Type != GameActionType.Fold && a.Name == h.Key))
+                            {
+                                var vec = string.Join(" ", g.Log.MakeVector(h.Key, HandState.Flop)) + Environment.NewLine;
+                                File.AppendAllText("flop_labels", label);
+                                File.AppendAllText("flop_data", vec);
+                            }
+
+                            if (g.Log.TurnActions.Any(a => a.Type != GameActionType.Fold && a.Name == h.Key))
+                            {
+                                var vec = string.Join(" ", g.Log.MakeVector(h.Key, HandState.Turn)) + Environment.NewLine;
+                                File.AppendAllText("turn_labels", label);
+                                File.AppendAllText("turn_data", vec);
+                            }
+
+                            if (g.Log.RiverActions.Any(a => a.Type != GameActionType.Fold && a.Name == h.Key))
+                            {
+                                var vec = string.Join(" ", g.Log.MakeVector(h.Key, HandState.River)) + Environment.NewLine;
+                                File.AppendAllText("river_labels", label);
+                                File.AppendAllText("river_data", vec);
+                            }
                         }
                     }
 
                     d++;
-                    Console.Title = hand.ToString();
+                    //Console.Title = hand.ToString();
                     if (hand % 1 == 0)
                     {
-                        PrintStatus(players);
+                        //Console.Clear();
+                        //Console.WriteLine(hand);
+                        //PrintStatus(players);
                     }
 
-                    if (players.Count == 1)
+                    if (players.Count < 6)
                     {
-                        s_log.Info("{0} has won the tournament!", players.First());
+                        s_log.Info("Table is short handed");
                         tournaments++;
-                        if (players[0].ToString() == "Alice")
-                        {
-                            wins++;
-                        }
                         break;
                     }
 
@@ -159,6 +222,22 @@ namespace Poker
                     Console.WriteLine("{0}: {1}", p, p.Balance);
                 }
             }
+        }
+
+        private static string MakeLabel(int i)
+        {
+            int[] labels = new int[169];
+            labels[i] = 1;
+
+            StringBuilder sb = new StringBuilder();
+
+            for (int n = 0; n < labels.Length; n++)
+            {
+                sb.Append(labels[n]);
+                sb.Append(' ');
+            }
+
+            return sb.ToString().Trim();
         }
     }
 }

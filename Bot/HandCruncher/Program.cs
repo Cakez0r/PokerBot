@@ -19,12 +19,42 @@ namespace Poker
 
         private static void Main(string[] args)
         {
-            double[] ramp = BankrollSimulator(1500);
-            File.WriteAllText("ramp.json", JsonConvert.SerializeObject(ramp));
-            //CreateTrainingFiles(HandState.Preflop);
+            CreateTrainingFiles(HandState.Preflop);
             //CreateTrainingFiles(HandState.Flop);
             //CreateTrainingFiles(HandState.Turn);
             //CreateTrainingFiles(HandState.River);
+        }
+
+        private static void DoAveraging(string file)
+        {
+            string[] lines = File.ReadAllLines(file);
+            double[] avg = new double[lines.First().Split(' ').Count()];
+            List<double[]> shifted = new List<double[]>(lines.Length);
+            foreach (string line in lines)
+            {
+                double[] vec = line.Split(' ').Select(d => double.Parse(d)).ToArray();
+                shifted.Add(vec);
+                for (int i = 0; i < avg.Length; i++)
+                {
+                    avg[i] += vec[i];
+                }
+            }
+
+            for (int i = 0; i < avg.Length; i++)
+            {
+                avg[i] /= lines.Length;
+            }
+
+            foreach (var vec in shifted)
+            {
+                for (int i = 0; i < avg.Length; i++)
+                {
+                    vec[i] -= avg[i];
+                }
+            }
+
+            File.WriteAllText(file + "_average.json", JsonConvert.SerializeObject(avg));
+            File.WriteAllLines(file + "_shifted", shifted.Select(v => string.Join(" ", v)));
         }
 
         private static double[] BankrollSimulator(double bankroll)
@@ -78,11 +108,13 @@ namespace Poker
         private static void CreateTrainingFiles(HandState state)
         {
             ConcurrentDictionary<HandClass, ConcurrentBag<Tuple<double[], string>>> data = new ConcurrentDictionary<HandClass, ConcurrentBag<Tuple<double[], string>>>();
+            MakeTrainingData<OngameHistoryParserRules>(@"D:\Poker data\ong", state, data);
             MakeTrainingData<FullTiltPokerHistoryParserRules>(@"D:\Poker data\FTP", state, data);
             MakeTrainingData<PokerstarsHistoryParserRules>(@"D:\Poker data\PS", state, data);
             MakeTrainingData<PartyPokerHistoryParserRules>(@"D:\Poker data\PTY", state, data);
+            MakeTrainingData<PokerstarsHistoryParserRules>(@"D:\Poker data\ps_hh", state, data);
 
-            int minSamples = data.Min(kv => kv.Value.Count) * 5;// (data.Min(kv => kv.Value.Count) + data.Max(kv => kv.Value.Count)) / 2;
+            int minSamples = data.Values.Min(b => b.Count) * 5;// data.OrderByDescending(kv => kv.Value.Count).Skip(10).First().Value.Count;
             List<double[]> vectors = new List<double[]>(minSamples * data.Count);
             List<string> labels = new List<string>(minSamples * data.Count);
 
@@ -168,6 +200,7 @@ namespace Poker
             }
 
             int count = 0;
+            long handCount = 0;
             Parallel.ForEach(GetFilesRecursive(folder), (fileName) =>
             //foreach (string fileName in GetFilesRecursive(folder))
             {
@@ -177,6 +210,7 @@ namespace Poker
                 {
                     try
                     {
+                        Interlocked.Increment(ref handCount);
                         if (game.Seats.Count < 3)
                         {
                             continue;
@@ -243,6 +277,11 @@ namespace Poker
 
                         foreach (var kvp in game.KnownHoleCards)
                         {
+                            if (kvp.Value.Length < 2)
+                            {
+                                continue;
+                            }
+
                             double[] vector = game.MakeVector(kvp.Key, state);
                             if (vector.Any(d => double.IsNaN(d) || double.IsInfinity(d)))
                             {
@@ -265,7 +304,7 @@ namespace Poker
                     }
                 }
                 Interlocked.Increment(ref count);
-                Console.Title = count.ToString();
+                Console.Title = "Files : " + count.ToString() + " Hands: " + handCount;
                 Console.WriteLine(fileName);
             });
         }

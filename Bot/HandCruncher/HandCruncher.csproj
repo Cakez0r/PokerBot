@@ -58,6 +58,7 @@
     <Compile Include="HistoryParserException.cs" />
     <Compile Include="IHistoryParserRules.cs" />
     <Compile Include="MatchInfo.cs" />
+    <Compile Include="OngameHistoryParserRules.cs" />
     <Compile Include="ParserCheckInfo.cs" />
     <Compile Include="PartyPokerHistoryParserRules.cs" />
     <Compile Include="PokerstarsHistoryParserRules.cs" />

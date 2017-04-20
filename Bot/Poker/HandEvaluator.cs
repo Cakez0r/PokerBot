@@ -19,11 +19,11 @@ namespace Poker
             List<Card> kickers = new List<Card>(5);
 
             var groupedBySuit = cards.GroupBy(c => c.Suit).ToList();
-            bool isFlush = groupedBySuit.Any(g => g.Count() == 5);
+            bool isFlush = groupedBySuit.Any(g => g.Count() >= 5);
 
             if (isFlush)
             {
-                actives.AddRange(groupedBySuit.First(g => g.Count() == 5));
+                actives.AddRange(groupedBySuit.First(g => g.Count() >= 5).OrderByDescending(c => (int)c.Face).Take(5));
             }
 
             List<Card> straightActives = new List<Card>(5);
@@ -94,8 +94,6 @@ namespace Poker
             //Flush
             if (isFlush)
             {
-                actives.AddRange(groupedBySuit.First(g => g.Count() == 5));
-
                 return new HandEvaluation(actives, kickers, 5 + MakeDouble(actives.OrderByDescending(c => c.Face).Take(1)), HandType.Flush);
             }
 
